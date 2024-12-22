@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+//import public "base.proto";
+
+import public "fileexchange.proto";
+
+option csharp_namespace = "ProcessingDatabase";
+
+package ProcessingDatabase;
+
+
+// The processing database service, shared for scrapper, preprocessor and processor units
+service ProcessingDatabase {
+
+
+  // Inserts data into a table, allowed only for scrapper
+  rpc Insert (InsertRequest) returns (InsertResult);
+  rpc ImportCSV(stream FileExchange.FileData) returns (FileExchange.UploadStatus);
+
+  // Getting data by status, allowed only for preprocessor and processor
+  // For preprocessor allowed status is only NEW, for processor allowed NEW and PREPROCESSED (depends on processor posibilities) status
+  rpc GetByStatus(GetByStatusRequest) returns (GetByStatusResult);
+
+  // Updating data after preprocessing or processing, status will be updated automatically
+  rpc UpdateByID(UpdateByIDRequest) returns (UpdateByIDResult);
+  //all checkings will be performed by the server
+}
+// === Сервис для взаимодействия с нейронной сетью ===
+service ImageEmbeddingService {
+    rpc ProcessImage (EmbeddingRequest) returns (EmbeddingResponse);
+}
+
+// Запрос на обработку изображения
+message EmbeddingRequest {
+    string image_name = 1;      // Название файла изображения
+    bytes image_data = 2;       // Содержимое изображения в байтах
+}
+
+// Ответ с эмбеддингом
+message EmbeddingResponse {
+    string embedding = 1;       // Эмбеддинг в виде строки
+}
+
+// Insert data
+message InsertRequest {
+	RecordStatus status = 1;
+	Record record = 2;
+}
+message InsertResult {
+	CommandResult result = 1;
+}
+
+// GetByStatus data
+message GetByStatusRequest {
+	RecordStatus status = 1;
+}
+message GetByStatusResult {
+	Record record = 1;
+	CommandResult result = 2;
+}
+
+// UpdateByID data
+message UpdateByIDRequest {
+	Record record = 1;
+}
+message UpdateByIDResult {
+	CommandResult result = 1;
+}
+
+// Describes set of possible values for Record status
+enum RecordStatus {
+	NEW = 0;
+	PREPROCESSED = 1;
+	PROCEESSED = 2;
+	FINISHED = 3;
+	ERROR = 4;
+}
+
+// Main data object. Record contains all necessary data for any procedures, may be optimized by server with including only mandatory data objects for each client
+// may be replaced with table-record structured message to optimize resources
+message Record {
+	string data = 1;
+}
+
+// Status message with results of procedure execution
+message CommandResult {
+	int32 errorCode = 1;
+	string errorMessage = 2;
+}

@@ -1,0 +1,3 @@
+python -m grpc_tools.protoc --proto_path=Protos --python_out=. --grpc_python_out=. Protos/image_embedding.proto
+
+pip freeze > requirements.txt

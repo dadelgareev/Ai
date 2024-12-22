@@ -1,0 +1,19 @@
+# Игнорировать виртуальное окружение
+.venv/
+Scrapper/ScraperCum/.venv/
+Scrapper/ScraperLamoda/.venv/
+
+# Игнорировать виртуальное окружение
+.venv/
+
+# Игнорировать временные файлы IDE
+.idea/
+.vscode/
+
+# Игнорировать файлы логов
+*.log
+
+# Игнорировать кеши Python
+__pycache__/
+*.pyc
+*.pyo

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package ImageEmbeddingService;
+
+// Сервис для взаимодействия с нейронной сетью
+service ImageEmbeddingService {
+    // Метод для обработки изображения и получения эмбеддинга
+    rpc ProcessImage (EmbeddingRequest) returns (EmbeddingResponse);
+}
+
+// Запрос на обработку изображения
+message EmbeddingRequest {
+    string image_name = 1;      // Название файла изображения
+    bytes image_data = 2;       // Содержимое изображения в байтах
+}
+
+// Ответ с эмбеддингом
+message EmbeddingResponse {
+    string embedding = 1;       // Эмбеддинг изображения в виде строки
+}
