@@ -1,0 +1,25 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "FileExchange";
+
+package FileExchange;
+
+
+service FileExchange {
+	rpc Upload(stream FileData) returns (UploadStatus);
+}
+
+message FileData {
+	string FileName = 1;
+	bytes ChunkData = 2;
+}
+
+enum UploadStatusCode {
+	OK = 0;
+	FAILED = 1;
+}
+
+message UploadStatus {
+	string message = 1;
+	UploadStatusCode code = 2;
+}

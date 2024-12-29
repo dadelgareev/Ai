@@ -3,7 +3,7 @@ import os
 
 from bs4 import BeautifulSoup
 
-from scraper import LamodaScraper
+from scraperLamoda import LamodaScraper
 
 categories_constants = {
     "Блузы и рубашки": [

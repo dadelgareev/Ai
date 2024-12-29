@@ -553,13 +553,20 @@ def fetch_similar_product_for_user_with_ids(user_id, conn_params, category, gend
     conn = psycopg2.connect(**conn_params)
     cursor = conn.cursor()
 
+    # Получаем имена колонок для embedding и velocity из словаря constant_values
+    column_name_embedding = constant_values.get(category, {}).get("Column_embedding")
+
+    # Проверяем, были ли найдены соответствующие колонки
+    if not column_name_embedding:
+        raise ValueError(f"Для категории '{category}' не найдены соответствующие колонки в constant_values.")
+
     # Запрос для нахождения похожих товаров и извлечения embedding пользователя,
     # исключая идентификаторы из viewed_ids.
-    query = """
+    query = f"""
     WITH user_embedding AS (
         SELECT 
-            preferences_embedding_1, 
-            COALESCE(viewed_ids, '{}') AS viewed_ids
+            {column_name_embedding}, 
+            COALESCE(viewed_ids, '{{}}') AS viewed_ids
         FROM user_info
         WHERE user_id = %s
     )
@@ -567,14 +574,14 @@ def fetch_similar_product_for_user_with_ids(user_id, conn_params, category, gend
         p.id AS similar_id,
         p.embedding AS similar_embedding,
         p.image_url AS similar_image_url,
-        1 - (ue.preferences_embedding_1 <=> p.embedding) AS similarity
+        1 - (ue.{column_name_embedding} <=> p.embedding) AS similarity
     FROM 
         products_all p,
         user_embedding ue
     WHERE 
         p.category = %s
         AND p.gender = %s
-        AND (1 - (ue.preferences_embedding_1 <=> p.embedding)) >= %s
+        AND (1 - (ue.{column_name_embedding} <=> p.embedding)) >= %s
         AND p.id::text <> ALL(ue.viewed_ids) -- Исключаем идентификаторы из viewed_ids
     ORDER BY 
         similarity DESC
@@ -1103,7 +1110,19 @@ def user_training(user_id, category, gender, learning_rate, momentum, liked, con
     print()
     print()
     #insert_user_embeddings(user_id, new_user_embedding, new_velocity,category, constant_values, conn_params)
-    update_user_embeddings_and_viewed_products(user_id, new_user_embedding, new_velocity,category, constant_values, similar_id,conn_params)
+    if liked:
+        update_user_embeddings_and_viewed_products(user_id, new_user_embedding, new_velocity,category, constant_values, similar_id,conn_params)
+    else:
+        update_user_embeddings_and_viewed_products(user_id, new_user_embedding, new_velocity, category, constant_values,
+                                                   similar_id, conn_params)
+        if(check_distance_threshold(user_id,conn_params,category, gender, 0.8)):
+            return
+        else:
+            update_user_embeddings_and_viewed_products(user_id, [float(x) for x in get_random_embedding(category, gender, conn_params).strip('[]').split(',')], new_velocity, category,
+                                                       constant_values,
+                                                       similar_id, conn_params)
+
+
 def generate_zero_list(length=1000):
     """
     Создаёт список строк, где каждая строка представляет число 0.
@@ -1183,6 +1202,90 @@ def generate_constants_json_for_every_category(file_path, conn_params):
     with open('constants_vectors.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=4, ensure_ascii=False)
 
+def get_random_embedding(category, gender, conn_params):
+    # Подключение к базе данных
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+
+    # Запрос для нахождения похожих товаров и извлечения embedding пользователя,
+    # исключая идентификаторы из viewed_ids.
+    query = """
+        SELECT embedding
+        FROM products_all
+        WHERE category = %s AND gender = %s
+        ORDER BY RANDOM()  -- Случайная сортировка
+        LIMIT 1;           -- Возврат одной строки
+    """
+
+    # Выполнение запроса с параметрами для категории, гендера и порога сходства
+    cursor.execute(query, (category, gender))
+    result = cursor.fetchall()
+
+    # Если результат найден
+    if result:
+        random_embedding = result[0][0]  # рандомный вектор
+        return random_embedding
+    else:
+        print(f"Не найден случайный вектор")
+        return None
+
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
+
+
+def check_distance_threshold(user_id, conn_params, category, gender, similarity_threshold):
+    # Подключение к базе данных
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+
+    column_name_embedding = constant_values.get(category, {}).get("Column_embedding")
+
+    # Проверяем, были ли найдены соответствующие колонки
+    if not column_name_embedding:
+        raise ValueError(f"Для категории '{category}' не найдены соответствующие колонки в constant_values.")
+
+    # Запрос для нахождения похожих товаров и извлечения embedding пользователя
+    query = f"""
+    SELECT EXISTS (
+    WITH user_embedding AS (
+        SELECT {column_name_embedding}
+        FROM user_info
+        WHERE user_id = %s
+    )
+    SELECT 
+        p.id AS similar_id,
+        p.embedding AS similar_embedding,
+        p.image_url AS similar_image_url,
+        1 - (ue.{column_name_embedding} <=> p.embedding) AS similarity
+    FROM 
+        products_all p,
+        user_embedding ue
+    WHERE 
+        p.category = %s
+        AND p.gender = %s
+        AND (1 - (ue.{column_name_embedding} <=> p.embedding)) >= %s
+    ORDER BY 
+        similarity DESC
+    LIMIT 1
+    );
+    """
+
+    # Выполнение запроса с параметрами для категории, гендера и порога сходства
+    cursor.execute(query, (user_id, category, gender, similarity_threshold))
+    result = cursor.fetchall()
+
+    # Если результат найден
+    if result:
+        return result[0][0]
+    else:
+        print(f"Не определено")
+        return None
+
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
+
 if __name__ == "__main__":
 
 
@@ -1221,7 +1324,9 @@ if __name__ == "__main__":
     print(get_keys_from_json("constant.json"))
     #generate_constants_json_for_every_category("constant.json",conn_params)
     #print(constant_values)
-    user_training(4,category,gender,0.01,0.9,True,conn_params)
+    #user_training(4,category,gender,0.01,0.9,True,conn_params)
+    print(check_distance_threshold(4, conn_params,category, gender, 0.8))
+    print(get_random_embedding(category, gender, conn_params))
     #similar_id, similar_embedding, similar_image_url = fetch_similar_product_for_user_with_ids(4,conn_params, category, gender, 0.8)
     #print(similar_id)
 

@@ -1,4 +1,5 @@
-from main import user_training, fetch_similar_product_for_user_with_ids
+from main import user_training, fetch_similar_product_for_user_with_ids, constant_values
+
 conn_params = {
     'host': '193.232.55.5',
     'database': 'postgres',
@@ -138,6 +139,89 @@ def fetch_similar_product_links_for_user(user_id, conn_params, category, gender,
 
     return links
 
+def get_random_embedding(category, gender, conn_params):
+    # Подключение к базе данных
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+
+    # Запрос для нахождения похожих товаров и извлечения embedding пользователя,
+    # исключая идентификаторы из viewed_ids.
+    query = """
+        SELECT embedding
+        FROM products_all
+        WHERE category = %s AND gender = %s
+        ORDER BY RANDOM()  -- Случайная сортировка
+        LIMIT 1;           -- Возврат одной строки
+    """
+
+    # Выполнение запроса с параметрами для категории, гендера и порога сходства
+    cursor.execute(query, (category, gender))
+    result = cursor.fetchall()
+
+    # Если результат найден
+    if result:
+        random_embedding = result[0][0]  # рандомный вектор
+        return random_embedding
+    else:
+        print(f"Не найден случайный вектор")
+        return None
+
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
+
+
+def check_distance_threshold(user_id, conn_params, category, gender, similarity_threshold):
+    # Подключение к базе данных
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+
+    column_name_embedding = constant_values.get(category, {}).get("Column_embedding")
+
+    # Проверяем, были ли найдены соответствующие колонки
+    if not column_name_embedding:
+        raise ValueError(f"Для категории '{category}' не найдены соответствующие колонки в constant_values.")
+
+    # Запрос для нахождения похожих товаров и извлечения embedding пользователя
+    query = f"""
+    SELECT EXISTS (
+    WITH user_embedding AS (
+        SELECT {column_name_embedding}
+        FROM user_info
+        WHERE user_id = %s
+    )
+    SELECT 
+        p.id AS similar_id,
+        p.embedding AS similar_embedding,
+        p.image_url AS similar_image_url,
+        1 - (ue.{column_name_embedding} <=> p.embedding) AS similarity
+    FROM 
+        products_all p,
+        user_embedding ue
+    WHERE 
+        p.category = %s
+        AND p.gender = %s
+        AND (1 - (ue.{column_name_embedding} <=> p.embedding)) >= %s
+    ORDER BY 
+        similarity DESC
+    LIMIT 1
+    );
+    """
+
+    # Выполнение запроса с параметрами для категории, гендера и порога сходства
+    cursor.execute(query, (user_id, category, gender, similarity_threshold))
+    result = cursor.fetchall()
+
+    # Если результат найден
+    if result:
+        return result[0][0]
+    else:
+        print(f"Не определено")
+        return None
+
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
 
 def display_images(url_list, page, category, gender):
     """
@@ -273,6 +357,7 @@ def like_or_dislike_mini_app(user_id, category, gender, conn_params):
         print(f"Пользователь {user_id} дизлайкнул товар ID {similar_id}.")
         user_training(user_id, category, gender, 0.01, 0.9, False, conn_params)
         fetch_new_product()
+
         window.after(0, update_image, similar_image_url)
 
     # Создаем окно Tkinter
