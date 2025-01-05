@@ -278,7 +278,7 @@ subcategory = "Блузы"  # пример подкатегории
 
 #category = get_category_for_subcategory(subcategory)
 #print(category)
-save_dict_to_json(categories_constants,"constant.json")
+#save_dict_to_json(categories_constants,"constant.json")
 """
 scraper = LamodaScraper()
 print(scraper.fetch_page("https://www.lamoda.ru/p/mp002xw173k4/clothes-ostin-zhaket/"))

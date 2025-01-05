@@ -1,15 +1,16 @@
 import csv
+import json
 
 import psycopg2
 from psycopg2.extras import Json
 import os
 
 connection_params = {
-    'host': '193.232.55.5',
+    'host': '89.111.172.215',
     'database': 'postgres',
-    'port': 5500,
+    'port': 5432,
     'user': 'postgres',
-    'password': 'super'
+    'password': 'm4zoM4gpHhMFGRAms056NsoBPbae6AEK'
 }
 
 
@@ -413,21 +414,129 @@ def describe_table(table_name):
         print(f"Ошибка при описании таблицы '{table_name}': {e}")
         return None
 
-describe_table("user_info")
-describe_table("products_all")
+def get_dict_from_table_realtion(table_name):
+    query = f"SELECT name, id from {table_name}"
+    try:
+        with psycopg2.connect(**connection_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (table_name,))
+                columns = cur.fetchall()
+
+                constant_dict = {}
+                for col in columns:
+                    constant_dict[col[0]] = col[1]
+                return constant_dict
+    except psycopg2.Error as e:
+        print("Exception", e)
+        return None
+
+def relation_between_two_categoies(json_name, dict_1, dict_2):
+    with open(json_name, "r",  encoding='utf-8') as json_file:
+        json_data = json.load(json_file)
+
+    keys_list = json_data.keys()
+    print(keys_list)
+    print(len(keys_list))
+
+    relation_list = []
+    for key in keys_list:
+        subcategories_list = json_data[key]
+        for subcategory in subcategories_list:
+            bigserial_key = dict_1[key]
+            bigserial_value = dict_2[subcategory]
+            relation_list.append((bigserial_key, bigserial_value))
+
+    return relation_list
 
 
+def insert_values_into_table(conn_params, table_name, json_file):
+    """
+    Добавляет все значения из JSON-файла в таблицу.
+
+    Args:
+        conn_params (dict): Параметры подключения к базе данных (host, dbname, user, password, port).
+        table_name (str): Название таблицы для вставки данных.
+        json_file (str): Путь к JSON-файлу.
+
+    Returns:
+        None
+    """
+    try:
+        # Чтение JSON-файла
+        with open(json_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            data = [value for key in data.keys() for value in data[key]]
+        # Проверка, что JSON содержит массив значений
+        if not isinstance(data, list):
+            raise ValueError("JSON должен содержать список значений.")
+
+        # Подключаемся к базе данных
+        with psycopg2.connect(**conn_params) as conn:
+            with conn.cursor() as cursor:
+                # SQL-запрос для вставки значений
+                query = f"INSERT INTO {table_name} (name) VALUES (%s) ON CONFLICT (name) DO NOTHING;"
+
+                # Вставляем каждое значение
+                for value in data:
+                    cursor.execute(query, (value,))
+                    print(value)
+
+            # Сохраняем изменения
+            conn.commit()
+            print(f"Добавлено {len(data)} записей в таблицу {table_name}.")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+def insert_into_mc_to_c(conn_params, data):
+    """
+    Вставляет данные в таблицу mc_to_c.
+
+    Args:
+        conn_params (dict): Параметры подключения к базе данных (host, dbname, user, password, port).
+        data (list): Список кортежей (microcategory1_id, microcategory2_id).
+
+    Returns:
+        None
+    """
+    try:
+        # Подключаемся к базе данных
+        with psycopg2.connect(**conn_params) as conn:
+            with conn.cursor() as cursor:
+                # SQL-запрос для вставки данных
+                query = """
+                INSERT INTO card.mc_to_c (microcategory1_id, microcategory2_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING;  -- Игнорируем дубликаты
+                """
+
+                # Выполняем массовую вставку
+                cursor.executemany(query, data)
+
+            # Сохраняем изменения
+            conn.commit()
+            print(f"Добавлено {len(data)} записей в таблицу mc_to_c.")
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+#describe_table("user_info")
+dict_microcategory1 = get_dict_from_table_realtion("card.microcategory1")
+dict_microcategory2 = get_dict_from_table_realtion("card.microcategory2")
+
+data = relation_between_two_categoies("constant.json", dict_microcategory1, dict_microcategory2)
+insert_into_mc_to_c(connection_params, data)
 
 # create_user_preferences_table("user_info")
 
 # Пример использования
-directory_path = "C:\\Users\\WorkCloudDressy\\PycharmProjects\\TestPgVectorIlya"
-temp_file_list = find_temp_files(directory_path)
-print(len(temp_file_list))
+#directory_path = "C:\\Users\\WorkCloudDressy\\PycharmProjects\\TestPgVectorIlya"
+#temp_file_list = find_temp_files(directory_path)
+#print(len(temp_file_list))
 # insert_csv_rows_with_processing("products_all","Lamoda-Man-shoes-sliponyespadrilimuj_temp.csv")
 # read_csv("Lamoda-Woman-clothes-d-insy_temp.csv", "all_products")
-similar_vector(7548)
-show_product_id(7548)
-show_product_id(6400)
-
+#similar_vector(7548)
+#show_product_id(7548)
+#show_product_id(6400)
+#print(insert_values_into_table(connection_params, "card.microcategory2", "constant.json"))
 # show_products()

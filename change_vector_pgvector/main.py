@@ -906,7 +906,7 @@ def update_user_embeddings(user_embedding, velocity, gradient, learning_rate, mo
     new_user_embedding = [user_v + vel_v for user_v, vel_v in zip(vector_user, new_velocity)]
 
     # Возвращаем новый вектор пользователя и обновлённое значение velocity
-    return new_user_embedding, new_velocity
+    return str(new_user_embedding), str(new_velocity)
 
 
 def compute_gradient(user_embedding, item_embedding):
@@ -1113,14 +1113,16 @@ def user_training(user_id, category, gender, learning_rate, momentum, liked, con
     if liked:
         update_user_embeddings_and_viewed_products(user_id, new_user_embedding, new_velocity,category, constant_values, similar_id,conn_params)
     else:
+        while not check_distance_threshold_by_embedding_with_user_ids(user_id,new_user_embedding, conn_params, category, gender, 0.8):
+            print("Сработало ограничение")
+            random_embedding = get_random_embedding(category, gender, conn_params)
+            temp_gradient = compute_gradient(user_embedding, random_embedding)
+            new_user_embedding, new_velocity = update_user_embeddings(new_user_embedding, new_velocity, temp_gradient, learning_rate*5,
+                                                                      momentum, True)
+
         update_user_embeddings_and_viewed_products(user_id, new_user_embedding, new_velocity, category, constant_values,
                                                    similar_id, conn_params)
-        if(check_distance_threshold(user_id,conn_params,category, gender, 0.8)):
-            return
-        else:
-            update_user_embeddings_and_viewed_products(user_id, [float(x) for x in get_random_embedding(category, gender, conn_params).strip('[]').split(',')], new_velocity, category,
-                                                       constant_values,
-                                                       similar_id, conn_params)
+
 
 
 def generate_zero_list(length=1000):
@@ -1286,6 +1288,125 @@ def check_distance_threshold(user_id, conn_params, category, gender, similarity_
     cursor.close()
     conn.close()
 
+def check_distance_threshold_by_embedding(embedding, conn_params, category, gender, similarity_threshold):
+
+    # Подключение к базе данных
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+
+    column_name_embedding = constant_values.get(category, {}).get("Column_embedding")
+
+    # Проверяем, были ли найдены соответствующие колонки
+    if not column_name_embedding:
+        raise ValueError(f"Для категории '{category}' не найдены соответствующие колонки в constant_values.")
+
+    # Запрос для нахождения похожих товаров
+    query = f"""
+    SELECT EXISTS (
+    SELECT 
+        p.id AS similar_id,
+        p.embedding AS similar_embedding,
+        p.image_url AS similar_image_url,
+        1 - (%s <=> p.embedding) AS similarity
+    FROM 
+        products_all p
+    WHERE 
+        p.category = %s
+        AND p.gender = %s
+        AND (1 - (%s <=> p.embedding)) >= %s
+    ORDER BY 
+        similarity DESC
+    LIMIT 1
+    );
+    """
+
+    # Выполнение запроса с параметрами для категории, гендера и порога сходства
+    cursor.execute(query, (embedding, category, gender, embedding, similarity_threshold))
+    result = cursor.fetchall()
+
+    # Если результат найден
+    if result:
+        return result[0][0]
+    else:
+        print(f"Не определено")
+        return None
+
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
+
+def check_distance_threshold_by_embedding_with_user_ids(user_id, embedding, conn_params, category, gender, similarity_threshold):
+
+
+    # Подключение к базе данных
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+
+    column_name_embedding = constant_values.get(category, {}).get("Column_embedding")
+
+    # Проверяем, были ли найдены соответствующие колонки
+    if not column_name_embedding:
+        raise ValueError(f"Для категории '{category}' не найдены соответствующие колонки в constant_values.")
+
+    # Получение списка просмотренных товаров (viewed_ids) для пользователя
+    cursor.execute(
+        """
+        SELECT viewed_ids
+        FROM user_info
+        WHERE user_id = %s;
+        """,
+        (user_id,)
+    )
+    viewed_ids_result = cursor.fetchone()
+
+    if not viewed_ids_result:
+        raise ValueError(f"Пользователь с ID '{user_id}' не найден в таблице user_info.")
+
+    # Извлекаем список просмотренных ID
+    viewed_ids = viewed_ids_result[0] if viewed_ids_result[0] else []
+
+    # Формируем SQL условие для исключения просмотренных товаров
+    if viewed_ids:
+        viewed_ids_str = f"AND p.id NOT IN ({','.join(map(str, viewed_ids))})"
+    else:
+        viewed_ids_str = ""  # Если список пуст, исключаем условие из запроса
+
+    # Запрос для нахождения похожих товаров с учетом viewed_ids
+    query = f"""
+    SELECT EXISTS (
+    SELECT 
+        p.id AS similar_id,
+        p.embedding AS similar_embedding,
+        p.image_url AS similar_image_url,
+        1 - (%s <=> p.embedding) AS similarity
+    FROM 
+        products_all p
+    WHERE 
+        p.category = %s
+        AND p.gender = %s
+        {viewed_ids_str}
+        AND (1 - (%s <=> p.embedding)) >= %s
+    ORDER BY 
+        similarity DESC
+    LIMIT 1
+    );
+    """
+
+    # Выполнение запроса с параметрами для категории, гендера и порога сходства
+    cursor.execute(query, (embedding, category, gender, embedding, similarity_threshold))
+    result = cursor.fetchall()
+
+    # Если результат найден
+    if result:
+        return result[0][0]
+    else:
+        print(f"Не определено")
+        return None
+
+    # Закрытие соединения
+    cursor.close()
+    conn.close()
+
 if __name__ == "__main__":
 
 
@@ -1317,7 +1438,7 @@ if __name__ == "__main__":
     #print(get_embedding_by_product_id(75825,conn_params))
     #user_training(6,0.1,0.1,True,conn_params)
     #embed = get_embedding_by_product_id(76123, conn_params)
-    #insert_user_embeddings(4,embed,generate_zero_list(),category,constant_values,conn_params)
+    #insert_user_embeddings(4,get_random_embedding(category, gender, conn_params),generate_zero_list(),category,constant_values,conn_params)
     #clear_viewed_ids_for_user(4, conn_params)
     #add_velocity_fields_to_table("user_info", conn_params)
     #user_training_by_product_id(64385,4,0.1,0.1,False,conn_params)
@@ -1327,6 +1448,11 @@ if __name__ == "__main__":
     #user_training(4,category,gender,0.01,0.9,True,conn_params)
     print(check_distance_threshold(4, conn_params,category, gender, 0.8))
     print(get_random_embedding(category, gender, conn_params))
+    embedding, velocity = get_user_embeddings(4, conn_params,category, constant_values)
+    print(embedding)
+    print(check_distance_threshold_by_embedding(embedding, conn_params, category, gender, 0.8))
+    print(check_distance_threshold_by_embedding_with_user_ids(4, embedding, conn_params, category, gender, 0.8))
+
     #similar_id, similar_embedding, similar_image_url = fetch_similar_product_for_user_with_ids(4,conn_params, category, gender, 0.8)
     #print(similar_id)
 
