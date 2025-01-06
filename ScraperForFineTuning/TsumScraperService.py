@@ -149,28 +149,4 @@ def test_fine_tuning_generate_csv():
     print(f'{file_name}.json, создан!')
     scraper.create_and_append_csv_json_fine_tuning(f'{file_name}.json', f'{file_name}.csv', main_category, grpc_client_AI)
 
-def only_test_run():
-    href_list = []
-    info = scraper.extract_categories(scraper.list_categories["man_shoes"][0])
-    subcategory_dict = info[0]
-    subcategory_short_name = subcategory_dict["url"].split('/')[-2]
-    print(info)
-    print(subcategory_dict)
-    subcategory_short_url = subcategory_dict['url']
-    url = 'https://www.tsum.ru' + subcategory_short_url
-    count = scraper.parse_count_pages(url, subcategory_short_name)
-    print(count)
-    print(type(count))
-
-    """
-    href_list = scraper.get_href_list(url, 1, href_list)
-    href_list = scraper.get_href_list(url, 2, href_list)
-    print(href_list)
-    scraper.update_links_file_json(f"Tsum-{scraper.list_categories["man_shoes"][1]}-{subcategory_short_name}.json",
-                                   href_list)
-    scraper.create_and_append_csv_json(
-        f"Tsum-{scraper.list_categories["man_shoes"][1]}-{subcategory_short_name}.json",
-        f"Tsum-{scraper.list_categories["man_shoes"][1]}-{subcategory_short_name}.csv",
-        scraper.list_categories["man_shoes"],grpc_client_AI)
-    """
-
+run()
