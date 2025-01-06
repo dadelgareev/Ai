@@ -625,11 +625,13 @@ class TsumScraper:
 
         # Инициализация переменных для хранения данных
         image_urls = []
-        product_data = {}
 
         try:
             # Парсим HTML с помощью BeautifulSoup
             soup = BeautifulSoup(html, 'html.parser')
+
+            # Парсим список категорий
+            categories_list = [item.get_text(strip=True) for item in soup.find_all('li', class_='Breadcrumbs__item___IVD_E')]
 
             # Ищем теги <script> с атрибутом data-app="true"
             script_tags = soup.find_all('script', attrs={'data-app': 'true'})
@@ -661,6 +663,10 @@ class TsumScraper:
                         category = product_info.get("category", {}).get("title", "")
                         price = product_info.get("sizes", [{}])[0].get("price", {}).get("originalPrice", None)
 
+                        tags = self.parse_tags(tags)
+                        tags["Цвет"] = color
+                        description = product_info.get("description", "Описание не найдено")
+
                         # Извлекаем артикул
                         article = None
                         for item in tags:
@@ -672,11 +678,13 @@ class TsumScraper:
                         product_data = {
                             "image_urls": image_urls,
                             "tags": tags,
-                            "color": color,
+                            #"color": color,
                             "brand": brand,
                             "category": category,
                             "price": price,
                             "article": article,
+                            "description": description,
+                            "list_categories": categories_list
                         }
 
                         return product_data
@@ -694,6 +702,16 @@ class TsumScraper:
         except Exception as e:
             logging.error(f"Произошла ошибка при обработке страницы: {e}")
             return None
+
+    def parse_tags(self, tags):
+        result = {}
+        for tag in tags:
+            if isinstance(tag, dict):  # Если элемент уже словарь
+                result.update(tag)  # Добавляем его в результат
+            elif isinstance(tag, str) and ':' in tag:  # Если строка и содержит ':'
+                key, value = tag.split(':', 1)  # Разделяем по первому двоеточию
+                result[key.strip()] = value.strip()  # Убираем лишние пробелы
+        return result
 
     def get_href_list(self, url,page=1, href_list=None):
         """
@@ -803,7 +821,7 @@ class TsumScraper:
         temp_output_csv = os.path.splitext(output_csv)[0] + '_temp.csv'
 
         # Поля CSV-файла
-        fieldnames = ['Source', 'Source_csv', 'Guid', 'Image_url', 'Main_photo', 'Guid_list', 'Id', 'Gender',
+        fieldnames = ['Source', 'Source_csv', 'Guid', 'Image_url', 'Main_photo', 'Guid_list', 'Article', 'Gender',
                       'Category', 'Subcategory', 'Embedding', 'Price', 'Brand', 'Tags']
 
         # Определяем директорию для изображений
@@ -897,7 +915,7 @@ class TsumScraper:
                         'Image_url': image_url,
                         'Main_photo': "None" if index == 0 else main_photo_guid,
                         'Guid_list': json.dumps(guid_list, ensure_ascii=False),
-                        'Id': image_url.split('/')[6].split('_')[0],
+                        'Article': result.get('article', "Артикул не найден"),
                         'Gender': main_category[1],
                         'Category': self.get_category_for_subcategory(subcategory),
                         'Subcategory': subcategory,
@@ -917,13 +935,105 @@ class TsumScraper:
         logging.info(f"Данные добавлены в '{output_csv}' и '{temp_output_csv}'")
         print(f"Данные добавлены в '{output_csv}' и '{temp_output_csv}'")
 
+    def create_and_append_csv_json_fine_tuning(self, json_file, output_csv, main_category, grpc_client=None):
+        """
+        Добавляет ссылки из JSON в существующий и новый CSV-файлы с категориями, тегами, эмбеддингом и источником.
+        Обрабатывает только ссылки со статусом "processed: False". После обработки меняет статус на "processed: True".
+        """
+        temp_output_csv = os.path.splitext(output_csv)[0] + '_temp.csv'
+
+        # Поля CSV-файла
+        fieldnames = ["image_path","list_categories","all_atributes","source","description"]
+
+        # Определяем директорию для изображений
+        if main_category[1] == "Man":
+            images_dir = os.path.join("Tsum_Photos", "Man", os.path.splitext(output_csv)[0])
+        elif main_category[1] == "Woman":
+            images_dir = os.path.join("Tsum_Photos", "Woman", os.path.splitext(output_csv)[0])
+        else:
+            images_dir = os.path.splitext(output_csv)[0]  # Для других категорий
+
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
+
+        # Загрузка ссылок из JSON
+        links_data = {}
+        if os.path.exists(json_file):
+            with open(json_file, 'r', encoding='utf-8') as file:
+                links_data = json.load(file)
+
+        unprocessed_links = [entry for entry in links_data.get("links", []) if not entry["processed"]]
+
+        # Открываем исходный и новый CSV файлы
+        with open(output_csv, 'a', newline='', encoding='utf-8') as old_csvfile, \
+                open(temp_output_csv, 'w', newline='', encoding='utf-8') as new_csvfile:
+
+            old_writer = csv.DictWriter(old_csvfile, fieldnames=fieldnames)
+            new_writer = csv.DictWriter(new_csvfile, fieldnames=fieldnames)
+
+            if old_csvfile.tell() == 0:
+                old_writer.writeheader()
+            new_writer.writeheader()
+
+            for link_entry in unprocessed_links:
+                url = link_entry["url"].strip()
+
+                try:
+                    result = self.get_all_atrib_from_page(url)
+                except Exception as e:
+                    logging.error(f"Ошибка при обработке URL {url}: {e}")
+                    continue
+
+                image_urls = result.get('image_urls', [])
+                tags = result.get('tags', {})
+                brand = result.get('brand', "Бренд не найден")
+
+                tags["Бренд"] = brand
+
+                all_categories = result.get('list_categories', [])
+                if all_categories:
+                    all_categories = all_categories[2:]
+                description = result.get('description', 'Описание не найдено')
+
+                for index, image_url in enumerate(image_urls):
+                    image_name = image_url.split('/')[-1]
+                    image_path = os.path.join(images_dir, image_name)
+                    try:
+                        if not os.path.exists(image_path):
+                            self.download_image(image_url, images_dir, image_name)
+                    except Exception as e:
+                        logging.error(f"Ошибка при скачивании картинки {image_url}: {e}")
+                        continue
+
+                for index, image_url in enumerate(image_urls):
+                    row_data = {
+                        "image_path" : os.path.join(os.getcwd(),os.path.join(images_dir,(image_url.split('/')[-1]))),
+                        "list_categories" : all_categories,
+                        "all_atributes" : tags,
+                        "source" : "Tsum",
+                        "description" : description,
+                    }
+                    old_writer.writerow(row_data)
+                    new_writer.writerow(row_data)
+
+                link_entry["processed"] = True
+
+        with open(json_file, 'w', encoding='utf-8') as file:
+            json.dump(links_data, file, ensure_ascii=False, indent=4)
+        logging.info(f"Данные добавлены в '{output_csv}' и '{temp_output_csv}'")
+        print(f"Данные добавлены в '{output_csv}' и '{temp_output_csv}'")
 
 if __name__ == "__main__":
     scraper = TsumScraper()
     main_category = scraper.list_categories["man_clothes"]
-    print(scraper.fetch_page(main_category[0]))
+    #print(scraper.fetch_page(main_category[0]))
 
-    print(scraper.get_all_atrib_from_page("https://www.tsum.ru/product/7015783-kashemirovoe-palto-must-chernyi/"))
+    dict_info = scraper.get_all_atrib_from_page("https://www.tsum.ru/product/7015783-kashemirovoe-palto-must-chernyi/")
+    href_list = ["https://www.tsum.ru/product/7015783-kashemirovoe-palto-must-chernyi/"]
+    scraper.update_links_file_json("123.json", href_list)
+    scraper.create_and_append_csv_json_fine_tuning("123.json", "123.csv",scraper.list_categories["man_clothes"])
+    print(dict_info)
+    """
     for main_category in scraper.list_categories:
         info = scraper.extract_categories(scraper.list_categories[main_category][0])
         for subcategory_dict in info:
@@ -941,3 +1051,4 @@ if __name__ == "__main__":
                                                #scraper.list_categories[main_category])
             break
         break
+    """

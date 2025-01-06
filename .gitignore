@@ -17,3 +17,12 @@ Scrapper/ScraperLamoda/.venv/
 __pycache__/
 *.pyc
 *.pyo
+
+# Игнорировать все CSV файлы
+*.csv
+
+# Игнорировать все JSON файлы
+*.json
+
+# Исключить из игнорирования constant.json
+!constant.json

@@ -803,7 +803,7 @@ class TsumScraper:
         temp_output_csv = os.path.splitext(output_csv)[0] + '_temp.csv'
 
         # Поля CSV-файла
-        fieldnames = ['Source', 'Source_csv', 'Guid', 'Image_url', 'Main_photo', 'Guid_list', 'Id', 'Gender',
+        fieldnames = ['Source', 'Source_csv', 'Guid', 'Image_url', 'Main_photo', 'Guid_list', 'Article', 'Gender',
                       'Category', 'Subcategory', 'Embedding', 'Price', 'Brand', 'Tags']
 
         # Определяем директорию для изображений
@@ -897,7 +897,7 @@ class TsumScraper:
                         'Image_url': image_url,
                         'Main_photo': "None" if index == 0 else main_photo_guid,
                         'Guid_list': json.dumps(guid_list, ensure_ascii=False),
-                        'Id': image_url.split('/')[6].split('_')[0],
+                        'Article': result.get('article', 'Артикул не указан'),
                         'Gender': main_category[1],
                         'Category': self.get_category_for_subcategory(subcategory),
                         'Subcategory': subcategory,

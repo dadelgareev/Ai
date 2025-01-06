@@ -81,6 +81,7 @@ def test_one_light_category():
     scraper.update_links_file_json(f'{file_name}.json', href_list)
     scraper.create_and_append_csv_json(f'{file_name}.json', f'{file_name}.csv', main_category, grpc_client_AI)
 
+
 def run():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
