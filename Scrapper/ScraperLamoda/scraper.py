@@ -814,7 +814,6 @@ class LamodaScraper:
                         logging.error(f"Ошибка при получении эмбеддинга через gRPC для {image_name}: {e}")
                         continue
 
-                    embedding_list.append("Ошибка")
                     # Генерация GUID
                     guid = str(uuid.uuid3(self.namespace, image_url))
                     guid_list.append(guid)
@@ -833,8 +832,8 @@ class LamodaScraper:
                         'Guid': guid_list[index],
                         'Image_url': image_url,
                         'Title': title,
-                        'Main_photo': None if index == 0 else main_photo_guid,
-                        'Guid_list': json.dumps(guid_list, ensure_ascii=False),
+                        'Main_photo': "None" if index == 0 else main_photo_guid,
+                        'Guid_list': guid_list,
                         'Article': image_url.split('/')[6].split('_')[0],
                         'Gender': main_category[1],
                         'Category': self.get_category_for_subcategory(subcategory),
@@ -842,7 +841,7 @@ class LamodaScraper:
                         'Embedding': embedding_list[index] if index < len(embedding_list) else "Ошибка",
                         'Price': price,
                         'Brand': brand,
-                        'Tags': json.dumps(attributes, ensure_ascii=False)
+                        'Tags': attributes
                     }
                     old_writer.writerow(row_data)
                     new_writer.writerow(row_data)
