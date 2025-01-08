@@ -2,12 +2,28 @@ import unittest
 from unittest.mock import patch, MagicMock
 from scraper import LamodaScraper  # Импортируем ваш класс
 import os
+from bs4 import BeautifulSoup
 
 class TestLamodaScraper(unittest.TestCase):
 
     def setUp(self):
         """Настраиваем начальное состояние перед каждым тестом."""
         self.scraper = LamodaScraper()
+        self.url = 'https://www.lamoda.ru/p/mp002xu08eu6/clothes-berhasm-khudi/'
+        self.html = self.scraper.fetch_page(self.url)
+        self.soup = BeautifulSoup(self.html, 'html.parser')
+
+    def test_extract_payload(self):
+        dict = self.scraper.extract_payload(self.soup)
+        # Ищем тег, содержащий название модели
+        product_name_tag = self.soup.find('div', class_='x-premium-product-title__model-name')
+
+        # Если тег найден, возвращаем его текст
+        if product_name_tag:
+            product_name_tag = product_name_tag.text.strip()
+
+        print(product_name_tag)
+        print(dict)
 
     @patch('lamoda_scraper.requests.get')
     def test_fetch_page_success(self, mock_get):
