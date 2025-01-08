@@ -983,6 +983,9 @@ class TsumScraper:
                 except Exception as e:
                     logging.error(f"Ошибка при обработке URL {url}: {e}")
                     continue
+                if result is None:
+                    logging.error(f"Результат для URL {url} пустой.")
+                    continue
 
                 image_urls = result.get('image_urls', [])
                 tags = result.get('tags', {})
