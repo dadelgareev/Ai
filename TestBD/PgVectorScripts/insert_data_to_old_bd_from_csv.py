@@ -1,5 +1,6 @@
 import csv
 import json
+import sys
 
 import psycopg2
 import uuid
@@ -14,13 +15,26 @@ connection_params_origin = {
     'user': 'postgres',
     'password': 'super'
 }
+dir = r"D:\DataSet\output_csv_lamoda_WITH_DUPLICATES"
 
-def get_csv_list():
-    files = os.listdir(os.getcwd())
-    for file in files[:]:
-        if not file.endswith('.csv'):
-            files.remove(file)
-    return files
+
+def get_csv_list(directory):
+    """
+    Получает список путей ко всем CSV-файлам в указанной директории.
+
+    :param directory: Путь к директории.
+    :return: Список путей к CSV-файлам.
+    """
+    # Получаем список всех файлов в директории
+    all_files = os.listdir(directory)
+
+    # Отбираем только файлы с расширением .csv
+    csv_files = [file for file in all_files if file.endswith('.csv')]
+
+    # Создаем пути к этим файлам
+    csv_files_with_path = [os.path.join(directory, file) for file in csv_files]
+
+    return csv_files_with_path
 
 def get_rows_from_csvs(csv_list, batch_size=1000):
     buffer = []  # Буфер для накопления строк
@@ -75,7 +89,7 @@ def create_card_row_table(conn_params):
             cur.close()
             conn.close()
 
-    
+
 def insert_data_to_old_bd_from_csv(csv_list, conn_params):
     """
     Вставляет данные из списка CSV-файлов в таблицу card_row.
@@ -90,39 +104,61 @@ def insert_data_to_old_bd_from_csv(csv_list, conn_params):
     try:
         conn = psycopg2.connect(**conn_params)
         cur = conn.cursor()
+        counter = 0
+        for batch in get_rows_from_csvs(csv_list):
+            for row in batch:
+                try:
+                    # Преобразование guid_list в формат PostgreSQL
+                    guid_list = row.get('Guid_list')
+                    if guid_list:  # Если guid_list не пустой
+                        guid_list = '{' + ','.join(json.loads(guid_list)) + '}'  # Преобразуем в формат {value1,value2}
+                    else:
+                        guid_list = None
 
-        for row in get_rows_from_csvs(csv_list):
-            try:
-                # Преобразуем данные из row в порядок, соответствующий SQL-запросу
-                data = (
-                    row.get('guid'),
-                    row.get('source_csv'),
-                    row.get('source'),
-                    row.get('image_url'),
-                    row.get('main_photo') == 'TRUE',  # Преобразование в BOOLEAN
-                    row.get('article'),
-                    row.get('guid_list', '{}'),  # Если пусто, то пустой массив
-                    list(map(float, row['embedding'][1:-1].split(','))) if row.get('embedding') else None,  # Преобразование строки в список чисел для VECTOR
-                    row.get('price_rub'),
-                    row.get('brand'),
-                    row.get('category'),
-                    row.get('subcategory'),
-                    row.get('gender'),
-                    row.get('title'),
-                    row.get('tags')
-                )
-                cur.execute(sql_query_insert, data)
-            except (Exception, psycopg2.DatabaseError) as error:
-                print(f"Ошибка при вставке строки {row}: {error}")
-                continue  # Пропустить строку с ошибкой
+                    # Преобразование embedding
+                    embedding = (
+                        list(map(float, row['Embedding'][1:-1].split(',')))
+                        if row.get('Embedding') else None
+                    )
 
-        conn.commit()  # Фиксируем транзакцию
-        print("Данные успешно вставлены.")
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(f"Ошибка подключения к базе данных: {error}")
+                    # Преобразуем данные в порядок, соответствующий SQL-запросу
+                    data = (
+                        row.get('Guid'),
+                        row.get('Source_csv'),
+                        row.get('Source'),
+                        row.get('Image_url'),
+                        row.get('Main_photo') == 'None',  # Преобразование в BOOLEAN
+                        row.get('Article'),
+                        guid_list,  # Массив для PostgreSQL
+                        embedding,  # Вектор данных
+                        row.get('Price_rub'),
+                        row.get('Brand'),
+                        row.get('Category'),
+                        row.get('Subcategory'),
+                        row.get('Gender'),
+                        row.get('Title'),
+                        row.get('Tags')
+                    )
+
+                    cur.execute(sql_query_insert, data)
+                    counter += 1
+
+                except (Exception, psycopg2.DatabaseError) as row_error:
+                    print(f"Ошибка при обработке строки: {row_error}")
+                    raise  # Прекращаем выполнение функции при критической ошибке
+            print(counter)
+
+        conn.commit()
+        print(f"Данные успешно вставлены: {counter} строк.")
+    except (Exception, psycopg2.DatabaseError) as db_error:
+        print(f"Ошибка подключения к базе данных: {db_error}")
+        sys.exit(1)  # Завершение программы при ошибке
     finally:
         if conn:
             cur.close()
             conn.close()
 if __name__ == '__main__':
-    files = get_csv_list()
+    #create_card_row_table(connection_params_origin)
+    files = get_csv_list(dir)
+    insert_data_to_old_bd_from_csv(files, connection_params_origin)
+
