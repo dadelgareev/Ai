@@ -17,7 +17,6 @@ connection_params_origin = {
 }
 dir = r"D:\DataSet\output_csv_lamoda_WITH_DUPLICATES"
 
-
 def get_csv_list(directory):
     """
     Получает список путей ко всем CSV-файлам в указанной директории.
