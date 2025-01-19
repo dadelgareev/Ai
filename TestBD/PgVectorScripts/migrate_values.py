@@ -4,6 +4,8 @@ import json
 
 import psycopg2
 import uuid
+
+from psycopg2._psycopg import cursor
 from psycopg2.extensions import adapt
 from psycopg2.extras import Json
 import os
@@ -626,19 +628,19 @@ def insert_into_mc_to_c(conn_params, id, value=None):
 
 def insert_to_new_table(connection_orig, connection_dest, table_name_old):
     """
-    Функция для переноса данных из одной базы в другую с использованием флага для проверки обработанных данных.
+    Функция для переноса данных из одной базы в другую с использованием переменной для проверки обработанных GUID.
     :param connection_orig: Параметры подключения к исходной базе данных.
     :param connection_dest: Параметры подключения к целевой базе данных.
     :param table_name_old: Название таблицы-источника.
     """
     query_add_2_card = """
-        INSERT INTO card.card (id, source_id, article, price_rub, brand_id, mc_to_c_id, gender_id, tilte)
+        INSERT INTO card.card (id, source_id, article, price_rub, brand_id, mc_to_c_id, gender_id, title)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
     """
 
     query_add_2_image_array = """
-        INSERT INTO card.image_array (card_id, link, main, vector)
-        VALUES (%s, %s, %s, %s);
+        INSERT INTO card.image_array (card_id, link, main, vector, image_id)
+        VALUES (%s, %s, %s, %s, %s);
     """
 
     query_add_2_tags = """
@@ -651,52 +653,54 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
         VALUES (%s) RETURNING id;
     """
 
-    query_check_card = """
-        SELECT 1 FROM card.card WHERE id = %s LIMIT 1;
-    """
-
     try:
         conn_dest = psycopg2.connect(**connection_dest)
         cursor_dest = conn_dest.cursor()
 
+        temp_guid = None  # Переменная для отслеживания текущего GUID
+        counter = 0
         for rows in get_rows_from_bd(connection_orig, table_name_old):
             for row in rows:
+                if counter < 5:
+                    counter += 1
+                else:
+                    return
+
                 guid = row[0]
-                flag = False  # Флаг для отслеживания существующего GUID
 
-                # Проверяем, если guid уже существует в таблице card
-                cursor_dest.execute(query_check_card, (guid,))
-                if cursor_dest.fetchone():
-                    flag = True
-
-                if flag:
+                if guid == temp_guid:
                     # Добавляем только данные для image и image_array
-                    link = row[9]
-                    main_photo = row[10]
+                    link = row[3]
+                    main_photo = row[4]
                     main_photo = main_photo == "None"  # Преобразуем в BOOLEAN
-                    vector = row[11]
+                    vector = row[7]
 
                     # Вставляем данные в таблицу image
                     cursor_dest.execute(query_add_2_image, (link,))
                     image_id = cursor_dest.fetchone()[0]
 
                     # Вставляем данные в таблицу image_array
-                    cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector))
+                    cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector, image_id))
                     print(f"Добавлены данные в image и image_array для GUID: {guid}")
                     continue  # Переходим к следующей строке
 
+                # Обновляем temp_guid для нового GUID
+                temp_guid = guid
+
                 # Обработка текущей строки
-                source_id = row[1]
-                article = row[2]
-                price_rub = row[3]
-                brand_id = row[4]
-                gender_id = row[5]
-                category = row[6]
-                subcategory = row[7]
-                tags = row[8]
+                source_id = row[2].lower()
+                article = row[5]
+                price_rub = float(row[8])
+                brand_id = row[9]
+                gender_id = row[12]
+                category = row[10]
+                subcategory = row[11]
+                tags = row[14]
                 title = "default"
 
                 # Преобразование данных
+                print(subcategory,category)
+
                 source_id = get_source_id_from_dict(source_id)
                 brand_id = get_brand_id_from_dict(brand_id)
                 mc_to_c_id = get_mc_to_c_id(category, subcategory)
@@ -722,9 +726,9 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
                 cursor_dest.execute(query_add_2_image, (link,))
                 image_id = cursor_dest.fetchone()[0]
 
-                cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector))
+                cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector, image_id))
                 print(f"Добавлены данные в image и image_array для GUID: {guid}")
-
+        print("Данные сохранены", counter)
         conn_dest.commit()  # Фиксируем изменения
         print("Все данные успешно перенесены.")
     except (Exception, psycopg2.DatabaseError) as error:
@@ -735,7 +739,14 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
             conn_dest.close()
 
 
-
+qury_show = """
+SELECT * FROM card_row LIMIT 1;
+"""
+conn_orig = psycopg2.connect(**connection_params_origin)
+cursor_orig = conn_orig.cursor()
+cursor_orig.execute(qury_show)
+rows = cursor_orig.fetchall()
+print(rows)
 table_name_old = "card_row"
 
 mc2c_data = get_mc_to_c_dict(connection_params_destination)
@@ -745,7 +756,7 @@ brand_data = get_brand_dict(connection_params_destination)
 gender_data = get_gender_dict(connection_params_destination)
 source_data = get_source_dict(connection_params_destination)
 tags_data = get_tags_dict(connection_params_destination)
-
+insert_to_new_table(connection_params_origin, connection_params_destination, "card_row")
 """
 for batch in get_pagination_rows(connection_params_origin, table_name):
     print(f"Получено {len(batch)} строк")

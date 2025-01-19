@@ -222,8 +222,8 @@ def insert_data_to_old_bd_from_csv_reader(csv_list, conn_params):
                         embedding,  # Вектор данных
                         float(row[11].replace(" ","")),
                         row[12],
-                        row[9],
                         row[8],
+                        row[9],
                         row[7],
                         #row.get('Title'),
                         row[13]
