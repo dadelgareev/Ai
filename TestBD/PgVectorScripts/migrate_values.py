@@ -351,10 +351,10 @@ def get_source_id_from_dict(source):
             break
     return source_id
 
-def get_tags_id_from_dict(tags):
+def get_tags_id_from_dict(tag):
     tags_id = None
-    for key in tags:
-        if tags[key] == tags:
+    for key in tags_data:
+        if tags_data[key] == tag:
             tags_id = key
             break
     return tags_id
@@ -639,19 +639,15 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
     """
 
     query_add_2_image_array = """
-        INSERT INTO card.image_array (card_id, link, main, vector, image_id)
-        VALUES (%s, %s, %s, %s, %s);
+        INSERT INTO card.image_array (card_id, link, main, vector)
+        VALUES (%s, %s, %s, %s);
     """
 
     query_add_2_tags = """
-        INSERT INTO card.tags_array (card_id, tag_id)
+        INSERT INTO card.tag_array (card_id, tag_id)
         VALUES (%s, %s);
     """
 
-    query_add_2_image = """
-        INSERT INTO card.image (link)
-        VALUES (%s) RETURNING id;
-    """
 
     try:
         conn_dest = psycopg2.connect(**connection_dest)
@@ -661,26 +657,29 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
         counter = 0
         for rows in get_rows_from_bd(connection_orig, table_name_old):
             for row in rows:
-                if counter < 5:
-                    counter += 1
-                else:
-                    return
+                counter += 1
+
 
                 guid = row[0]
+
+                category = row[10]
+                subcategory = row[11]
+                mc_to_c_id = get_mc_to_c_id(category, subcategory)
+                if mc_to_c_id is None:
+                    continue
 
                 if guid == temp_guid:
                     # Добавляем только данные для image и image_array
                     link = row[3]
+
                     main_photo = row[4]
+
                     main_photo = main_photo == "None"  # Преобразуем в BOOLEAN
                     vector = row[7]
 
-                    # Вставляем данные в таблицу image
-                    cursor_dest.execute(query_add_2_image, (link,))
-                    image_id = cursor_dest.fetchone()[0]
 
                     # Вставляем данные в таблицу image_array
-                    cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector, image_id))
+                    cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector))
                     print(f"Добавлены данные в image и image_array для GUID: {guid}")
                     continue  # Переходим к следующей строке
 
@@ -693,8 +692,7 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
                 price_rub = float(row[8])
                 brand_id = row[9]
                 gender_id = row[12]
-                category = row[10]
-                subcategory = row[11]
+
                 tags = row[14]
                 title = "default"
 
@@ -703,17 +701,24 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
 
                 source_id = get_source_id_from_dict(source_id)
                 brand_id = get_brand_id_from_dict(brand_id)
-                mc_to_c_id = get_mc_to_c_id(category, subcategory)
+
                 gender_id = get_gender_id_from_dict(gender_id)
                 tags_dict = ast.literal_eval(tags)
 
                 # Вставляем данные в card
                 cursor_dest.execute(query_add_2_card, (guid, source_id, article, price_rub, brand_id, mc_to_c_id, gender_id, title))
                 print(f"Добавлены данные в card для GUID: {guid}")
-
+                print(tags_dict)
                 # Вставляем данные в tags_array
                 for tag in tags_dict:
-                    tag_id = get_tags_id_from_dict(tag)
+                    if tag == "Артикул":
+                        continue
+                    full_tag = f'{tag}:"{tags_dict[tag]}"'
+
+                    tag_id = get_tags_id_from_dict(full_tag)
+
+                    if tag_id is None:
+                        continue
                     cursor_dest.execute(query_add_2_tags, (guid, tag_id))
                 print(f"Добавлены данные в tags_array для GUID: {guid}")
 
@@ -721,12 +726,9 @@ def insert_to_new_table(connection_orig, connection_dest, table_name_old):
                 link = row[9]
                 main_photo = row[10]
                 main_photo = main_photo == "None"  # Преобразуем в BOOLEAN
-                vector = row[11]
+                vector = row[7]
 
-                cursor_dest.execute(query_add_2_image, (link,))
-                image_id = cursor_dest.fetchone()[0]
-
-                cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector, image_id))
+                cursor_dest.execute(query_add_2_image_array, (guid, link, main_photo, vector))
                 print(f"Добавлены данные в image и image_array для GUID: {guid}")
         print("Данные сохранены", counter)
         conn_dest.commit()  # Фиксируем изменения
@@ -756,7 +758,8 @@ brand_data = get_brand_dict(connection_params_destination)
 gender_data = get_gender_dict(connection_params_destination)
 source_data = get_source_dict(connection_params_destination)
 tags_data = get_tags_dict(connection_params_destination)
-insert_to_new_table(connection_params_origin, connection_params_destination, "card_row")
+print(tags_data)
+#insert_to_new_table(connection_params_origin, connection_params_destination, "card_row")
 """
 for batch in get_pagination_rows(connection_params_origin, table_name):
     print(f"Получено {len(batch)} строк")
