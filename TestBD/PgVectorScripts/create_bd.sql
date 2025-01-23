@@ -4,8 +4,7 @@ CREATE SCHEMA ecommerce;
 -- 1. Таблица sources
 CREATE TABLE ecommerce.sources (
     id SERIAL PRIMARY KEY,
-    source_name VARCHAR(255) NOT NULL,
-    source_csv VARCHAR(255)
+    source_name VARCHAR(255) NOT NULL
 );
 
 -- 2. Таблица categories
@@ -44,6 +43,7 @@ CREATE TABLE ecommerce.genders (
 CREATE TABLE ecommerce.cards (
     id UUID PRIMARY KEY,
     source_id INT REFERENCES ecommerce.sources(id),
+    article VARCHAR(63) NOT NULL,
     price NUMERIC(10, 2),
     brand_id INT REFERENCES ecommerce.brands(id),
     gender_id INT REFERENCES ecommerce.genders(id),
@@ -64,5 +64,5 @@ CREATE TABLE ecommerce.images (
 CREATE TABLE ecommerce.embeddings (
     id SERIAL PRIMARY KEY,
     image_id INT REFERENCES ecommerce.images(id),
-    vector JSONB NOT NULL
+    vector VECTOR(1000) NOT NULL
 );
