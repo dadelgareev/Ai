@@ -58,11 +58,6 @@ CREATE TABLE ecommerce.images (
     card_id UUID REFERENCES ecommerce.cards(id),
     image_url TEXT NOT NULL,
     main_photo BOOLEAN DEFAULT FALSE
-);
-
--- 9. Таблица embeddings (ссылается на images)
-CREATE TABLE ecommerce.embeddings (
-    id SERIAL PRIMARY KEY,
-    image_id INT REFERENCES ecommerce.images(id),
     vector VECTOR(1000) NOT NULL
 );
+
