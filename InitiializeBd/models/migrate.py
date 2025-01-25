@@ -1,4 +1,5 @@
 import json
+import os
 
 from models.cards import insert_cards
 from models.images import insert_images
@@ -49,23 +50,25 @@ def migrate_data(batch_size=1000):
     Миграция данных из card_row в таблицы cards и images с использованием LIMIT и OFFSET для пагинации.
     """
     # Загружаем данные из JSON-файлов
-    sources = load_json("output_json/sources.json")
-    brands = load_json("output_json/brands.json")
-    genders = load_json("output_json/genders.json")
-    categories = load_json("output_json/categories.json")
+    sources = load_json("../output_json/sources.json")
+    brands = load_json("../output_json/brands.json")
+    genders = load_json("../output_json/genders.json")
+    categories = load_json("../output_json/categories.json")
+    subcategories = load_json("../output_json/subcategories.json")
+    category_links = load_json("../output_json/category_links.json")
 
-    if not all([sources, brands, genders, categories]):
+    if not all([sources, brands, genders, categories, subcategories, category_links]):
         print("Один или несколько JSON-файлов отсутствуют или пусты.")
         return
 
     # Инициализируем переменные
     offset = 0
-    temp_guid = None  # Для отслеживания последнего обработанного GUID
+    temp_article = None  # Для отслеживания последнего обработанного article
 
     while True:
         # Пагинация через LIMIT и OFFSET
         query = f"""
-        SELECT uuid, source, article, price_rub, brand, gender, category, tags, title, image_url, main_photo
+        SELECT guid, source, article, price_rub, brand, gender, category, subcategory, tags, title, image_url, main_photo, embedding
         FROM card_row
         WHERE source IS NOT NULL AND article IS NOT NULL
           AND brand IS NOT NULL AND gender IS NOT NULL
@@ -85,35 +88,38 @@ def migrate_data(batch_size=1000):
         images_data = []  # Список для накопления данных об изображениях
 
         for row in rows:
-            guid = row[0]  # UUID из строки
+            article = row[2]  # article из строки
+            print(article)
 
-            if guid != temp_guid:
-                # Если новый GUID, обрабатываем строку как новую карточку
-                card, image = process_row(row, sources, brands, genders, categories)
+            if article != temp_article:
+                # Если новый article, обрабатываем строку как новую карточку
+                card, image = process_row(row, sources, brands, genders, categories, subcategories, category_links)
                 if card:
                     cards_data.append(card)
                 if image:
                     images_data.append(image)
 
-                # Обновляем temp_guid на текущий
-                temp_guid = guid
+                # Обновляем temp_article на текущий
+                temp_article = article
             else:
-                # Если GUID тот же, добавляем только изображение
-                _, image = process_row(row, sources, brands, genders, categories)
+                # Если article тот же, добавляем только изображение
+                _, image = process_row(row, sources, brands, genders, categories, subcategories, category_links)
                 if image:
                     images_data.append(image)
 
         # Вставляем данные в таблицы
         if cards_data:
+            print("Добавляем карту")
             insert_cards(cards_data)
         if images_data:
+            print("Добавляем изображение")
             insert_images(images_data)
 
         # Увеличиваем offset для следующего пакета
         offset += batch_size
 
 
-def process_row(row, sources, brands, genders, categories):
+def process_row(row, sources, brands, genders, categories, subcategories, category_links):
     """
     Преобразует строку из card_row в данные для таблиц cards и images.
 
@@ -124,17 +130,20 @@ def process_row(row, sources, brands, genders, categories):
     :param categories: Данные categories.json.
     :return: Кортеж (данные для cards, данные для images).
     """
-    uuid, source, article, price, brand, gender, category, tags, title, image_url, main_photo = row
+    uuid, source, article, price, brand, gender, category, subcategory,  tags, title, image_url, main_photo, vector = row
 
     # Поиск ID
     source_id = sources.get(source)
     brand_id = brands.get(brand)
     gender_id = genders.get(gender)
     category_id = categories.get(category)
+    subcategory_id = subcategories.get(subcategory)
+    category_links_id = category_links.get(f"{category_id,subcategory_id}")
 
     # Проверка на валидность
-    if not all([source_id, brand_id, gender_id, category_id]):
-        print(f"Пропущена строка: source={source}, brand={brand}, gender={gender}, category={category}")
+    if not all([source_id, brand_id, gender_id, category_links_id]):
+        print(f"Пропущена строка: source={source}, brand={brand}, gender={gender}, category_links={(category_id, subcategory_id)}, результаты поиска: {source_id}, {brand_id}, {gender_id}, {category_links_id}")
+
         return None, None
 
     # Данные для таблицы cards
@@ -145,7 +154,7 @@ def process_row(row, sources, brands, genders, categories):
         "price": price,
         "brand_id": brand_id,
         "gender_id": gender_id,
-        "category_id": category_id,
+        "category_links_id": category_links_id,
         "tags": tags,
         "title": title
     }
@@ -154,7 +163,19 @@ def process_row(row, sources, brands, genders, categories):
     image = {
         "card_id": uuid,
         "image_url": image_url,
-        "main_photo": main_photo
+        "main_photo": main_photo,
+        "vector": vector
     }
 
     return card, image
+
+if __name__ == "__main__":
+
+    try:
+        migrate_data(batch_size=10)  # Указываем размер пакета для миграции
+        print("Миграция данных успешно завершена.")
+    except Exception as e:
+        print(f"Ошибка при миграции данных: {e}")
+
+
+
