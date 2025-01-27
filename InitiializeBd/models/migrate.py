@@ -73,6 +73,7 @@ def migrate_data(batch_size=1000):
         WHERE source IS NOT NULL AND article IS NOT NULL
           AND brand IS NOT NULL AND gender IS NOT NULL
           AND category IS NOT NULL
+          ORDER BY article
         LIMIT {batch_size} OFFSET {offset};
         """
 
@@ -89,7 +90,7 @@ def migrate_data(batch_size=1000):
 
         for row in rows:
             article = row[2]  # article из строки
-            print(article)
+
 
             if article != temp_article:
                 # Если новый article, обрабатываем строку как новую карточку
