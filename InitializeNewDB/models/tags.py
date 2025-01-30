@@ -1,33 +1,87 @@
 import json
 import uuid
+
+import psycopg2
+import psycopg2.extras
+
 from db.db_connection import get_connection, DB_CONFIG_DEV, DB_CONFIG_ROW
 
 
-def fetch_tags_from_row():
+def fetch_tags_from_row(batch_size=100000):
     """
-    Получает уникальные теги из базы данных ROW (таблица card_row).
+    Получает теги из базы данных ROW постранично (batch processing), сохраняя все пары tag_key: tag_value.
     """
     query = """
-    SELECT DISTINCT tag_key, tag_value
+    SELECT tags
     FROM card_row
-    WHERE tag_key IS NOT NULL AND tag_value IS NOT NULL;
+    WHERE tags IS NOT NULL
+    LIMIT %s OFFSET %s;
     """
-    return fetch_data_from_db(DB_CONFIG_ROW, query, key_column_index=0, value_column_index=1)
 
+    offset = 0
+    extracted_tags = []  # Храним список словарей
 
-def fetch_data_from_db(config, query, key_column_index=0, value_column_index=None):
-    """
-    Универсальная функция для получения данных из базы данных.
-    """
-    with get_connection(config) as conn:
+    with get_connection(DB_CONFIG_ROW) as conn:
         with conn.cursor() as cursor:
-            cursor.execute(query)
-            rows = cursor.fetchall()
+            while True:
+                cursor.execute(query, (batch_size, offset))
+                rows = cursor.fetchall()
 
-            if value_column_index is not None:
-                return {row[key_column_index]: row[value_column_index] for row in rows}  # {key: value}
-            else:
-                return {row[key_column_index] for row in rows}  # {key}
+                if not rows:
+                    break  # Если больше нет данных, выходим из цикла
+
+                for row in rows:
+                    tags_str = row[0]  # JSON-строка с тегами
+
+                    try:
+                        tags_dict = json.loads(tags_str)  # Преобразуем строку в словарь
+                        tag_entries = [
+                            {"TagKey": tag_key, "TagValue": tag_value}
+                            for tag_key, tag_value in tags_dict.items() if tag_key != "Артикул"
+                        ]
+                        extracted_tags.extend(tag_entries)  # Добавляем списком
+
+                    except json.JSONDecodeError:
+                        print(f"Ошибка парсинга JSON: {tags_str}")
+
+                offset += batch_size  # Смещаем оффсет для следующей пачки
+                print(f"Обработано {offset} записей...")
+
+    print(f"Всего тегов собрано: {len(extracted_tags)}")
+    return extracted_tags
+
+
+def fetch_tags_from_dev(batch_size=100000):
+    """
+    Получает существующие теги из базы данных DEV постранично.
+    """
+    query = """
+    SELECT "TagKey", "TagValue"
+    FROM public."Tags"
+    LIMIT %s OFFSET %s;
+    """
+
+    offset = 0
+    dev_tags = {}
+
+    with get_connection(DB_CONFIG_DEV) as conn:
+        with conn.cursor() as cursor:
+            while True:
+                cursor.execute(query, (batch_size, offset))
+                rows = cursor.fetchall()
+
+                if not rows:
+                    break
+
+                for tag_key, tag_value in rows:
+                    if tag_key == "Артикул":
+                        continue
+                    dev_tags[tag_key] = tag_value
+
+                offset += batch_size  # Смещаем оффсет
+
+
+    return dev_tags
 
 
 def generate_tag_uuid(tag_key, tag_value):
@@ -39,25 +93,35 @@ def generate_tag_uuid(tag_key, tag_value):
 
 def save_tags_to_json(output_file="tags.json"):
     """
-    Получает теги из базы данных ROW и сохраняет их в JSON файл.
+    Получает теги из базы данных ROW постранично, преобразует их и сохраняет в JSON-файл.
+    Теперь теги хранятся в формате {"TagKey|TagValue": UUID}.
     """
-    row_tags = fetch_tags_from_row()
+    row_tags = fetch_tags_from_row()  # [{"TagKey": key, "TagValue": value}, ...]
+    dev_tags = fetch_tags_from_dev()  # { "TagKey|TagValue": UUID }
 
-    # Генерация UUID для каждой пары tag_key и tag_value
-    tags_with_uuid = {
-        f"{tag_key}|{tag_value}": generate_tag_uuid(tag_key, tag_value)
-        for tag_key, tag_value in row_tags.items()
-    }
+    new_tags = {}
+
+    for tag_entry in row_tags:
+        tag_key = tag_entry["TagKey"]
+        tag_value = tag_entry["TagValue"]
+        tag_combined = f"{tag_key}|{tag_value}"
+
+        if tag_combined not in dev_tags:
+            new_tags[tag_combined] = generate_tag_uuid(tag_key, tag_value)
+
+    if not new_tags:
+        print("Новых тегов нет, JSON не обновлён.")
+        return
 
     # Сохраняем в JSON
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(tags_with_uuid, f, ensure_ascii=False, indent=4)
-    print(f"Теги сохранены в JSON файл: {output_file}")
+        json.dump(new_tags, f, ensure_ascii=False, indent=4)
 
+    print(f"Теги сохранены в JSON файл: {output_file}")
 
 def load_tags_from_json(input_file="tags.json"):
     """
-    Загружает теги из JSON-файла.
+    Загружает JSON-файл с категориями.
     """
     try:
         with open(input_file, "r", encoding="utf-8") as f:
@@ -67,47 +131,54 @@ def load_tags_from_json(input_file="tags.json"):
         return {}
 
 
-def insert_tags_into_dev(json_file="tags.json"):
+def insert_tags_into_dev(json_file="tags.json", batch_size=50000):
     """
-    Вставляет теги из JSON в таблицу Tags базы данных DEV.
+    Вставляет недостающие теги из JSON в базу данных DEV пачками.
     """
     # Загружаем теги из JSON
-    tags = load_tags_from_json(json_file)
+    try:
+        with open(json_file, "r", encoding="utf-8") as f:
+            tags = json.load(f)
+    except FileNotFoundError:
+        print(f"Файл {json_file} не найден.")
+        return
+
     if not tags:
-        print("JSON-файл пуст или отсутствует.")
+        print("JSON-файл пуст, новых тегов нет.")
         return
 
-    # Проверим, какие теги уже существуют в таблице Tags
-    existing_tags = fetch_data_from_db(DB_CONFIG_DEV, 'SELECT "TagKey", "TagValue" FROM public."Tags";', key_column_index=0, value_column_index=1)
+    # Получаем текущие теги из базы данных DEV
+    existing_tags = fetch_tags_from_dev()
+    existing_tags_set = {(tag["TagKey"], tag["TagValue"]) for tag in existing_tags}
 
-    # Определяем теги, которых нет в базе данных
-    tags_to_insert = {
-        (tag_key, tag_value): tag_uuid
-        for (tag_key, tag_value), tag_uuid in tags.items()
-        if (tag_key, tag_value) not in existing_tags
-    }
+    # Фильтруем теги, которых ещё нет в DEV
+    new_tags = [
+        {"TagKey": tag_dict["TagKey"], "TagValue": tag_dict["TagValue"], "Id": tag_dict["Id"]}
+        for tag_dict in tags
+        if (tag_dict["TagKey"], tag_dict["TagValue"]) not in existing_tags_set
+    ]
 
-    if not tags_to_insert:
-        print("Все теги уже существуют в базе данных.")
+    if not new_tags:
+        print("Все теги уже существуют в базе данных DEV.")
         return
 
-    # Вставляем новые теги
-    insert_query = 'INSERT INTO public."Tags" ("TagKey", "TagValue", "Id") VALUES (%s, %s, %s);'
+    # Вставляем недостающие теги пачками
+    insert_query = 'INSERT INTO public."Tags" ("TagKey", "TagValue", "Id") VALUES %s ON CONFLICT DO NOTHING;'
+
     with get_connection(DB_CONFIG_DEV) as conn:
         with conn.cursor() as cursor:
-            for (tag_key, tag_value), tag_uuid in tags_to_insert.items():
-                cursor.execute(insert_query, (tag_key, tag_value, tag_uuid))
-                print(f"Добавлен тег: TagKey = {tag_key}, TagValue = {tag_value}, UUID: {tag_uuid}")
-            conn.commit()
-        print("Теги успешно добавлены в базу данных DEV.")
+            for i in range(0, len(new_tags), batch_size):
+                batch = new_tags[i: i + batch_size]
+                values = [(tag["TagKey"], tag["TagValue"], tag["Id"]) for tag in batch]
+
+                # Вставляем пачкой
+                psycopg2.extras.execute_values(cursor, insert_query, values)
+                conn.commit()
+                print(f"Добавлено {len(batch)} тегов в DEV.")
+
+    print("Недостающие теги успешно добавлены в базу данных DEV.")
 
 
 if __name__ == "__main__":
-    # Шаг 1: Получение тегов и сохранение их в JSON
-    print("Получение тегов и сохранение их в JSON файл...")
-    save_tags_to_json("tags.json")
-
-    # Шаг 2: Вставка тегов в базу данных DEV из JSON
-    print("Вставка тегов из JSON в базу данных DEV...")
-    insert_tags_into_dev("tags.json")
-    print("Процесс завершён.")
+    save_tags_to_json("../output_json/tags.json")
+    #insert_tags_into_dev("../output_json/tags.json")

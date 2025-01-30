@@ -1,30 +1,23 @@
+import psycopg2
 from db.db_connection import get_connection, DB_CONFIG_DEV
-
 
 def insert_images(images):
     """
-    Вставляет данные в таблицу ecommerce.images.
-
-    :param images: Список словарей с данными для вставки.
+    Вставляет данные в таблицу CardImages
+    :param images: список словарей с данными изображений
     """
-    if not images:
-        print("Нет данных для вставки в таблицу images.")
-        return
-
     query = """
-    INSERT INTO ecommerce.images (
-        card_id, image_url, main_photo, vector
-    ) VALUES (%s, %s, %s, %s)
-    ON CONFLICT DO NOTHING;
+    INSERT INTO public."CardImages" ("Id", "Links", "MainLink", "CardId", "CreatedDate", "UpdatedDate")
+    VALUES %s
+    ON CONFLICT ("Id") DO NOTHING;
     """
 
-
+    values = [
+        (image["id"], image["links"], image["main_link"], image["card_id"], "NOW()", "NOW()")
+        for image in images
+    ]
 
     with get_connection(DB_CONFIG_DEV) as conn:
         with conn.cursor() as cursor:
-            for image in images:
-                cursor.execute(query, (
-                    image["card_id"], image["image_url"], image["main_photo"], image["vector"]
-                ))
-            conn.commit()
-        print(f"{len(images)} записей добавлены в таблицу images.")
+            psycopg2.extras.execute_values(cursor, query, values)
+        conn.commit()
