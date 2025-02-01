@@ -41,7 +41,7 @@ def fetch_brands_from_row():
 
 def generate_brand_json(output_file="brands.json"):
     """
-    Создаёт JSON-файл, содержащий {uuid: brand_name}, объединяя данные из DEV и ROW.
+    Создаёт JSON-файл, содержащий {brand_name: uuid}, объединяя данные из DEV и ROW.
     """
     dev_brands = fetch_brands_from_dev()
     row_brands = fetch_brands_from_row()
@@ -49,13 +49,13 @@ def generate_brand_json(output_file="brands.json"):
     # Находим бренды из ROW, которых нет в DEV
     new_brands = row_brands - set(dev_brands.keys())
 
-    # Создаём итоговый JSON, преобразуем id в UUID для существующих брендов
-    result_json = {str(uuid.uuid5(uuid.NAMESPACE_DNS, brand)): brand for brand in dev_brands}
+    # Создаём итоговый JSON, где ключом будет бренд, а значением UUID
+    result_json = {brand: str(uuid.uuid5(uuid.NAMESPACE_DNS, brand)) for brand in dev_brands}
 
     # Генерируем UUID для новых брендов
     for brand in new_brands:
         brand_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, brand))  # Детерминированный UUID
-        result_json[brand_uuid] = brand
+        result_json[brand] = brand_uuid
 
     # Сохраняем JSON
     with open(output_file, "w", encoding="utf-8") as f:
@@ -99,12 +99,13 @@ def insert_brands_into_dev(json_file="brands.json"):
     insert_query = 'INSERT INTO public."Brands" ("Name", "Id") VALUES (%s, %s) RETURNING "Id";'
     with get_connection(DB_CONFIG_DEV) as conn:
         with conn.cursor() as cursor:
-            for uuid_, brand in brands_to_add.items():
+            for brand, uuid_ in brands_to_add.items():
                 cursor.execute(insert_query, (brand, uuid_))
                 new_id = cursor.fetchone()[0]
                 print(f"Добавлен бренд: {brand}, ID: {new_id}")
             conn.commit()
         print("Недостающие бренды успешно добавлены в базу данных DEV.")
+
 
 if __name__ == "__main__":
     # Проверяем, существует ли папка output_json

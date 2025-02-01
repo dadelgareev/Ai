@@ -7,12 +7,12 @@ def insert_card_subcategories(card_subcategories):
     :param card_subcategories: список словарей {card_id, subcategory_id}
     """
     query = """
-    INSERT INTO public."SubCategories" ("CardId", "SubCategoryId", "CreatedDate", "UpdatedDate")
+    INSERT INTO public."SubCategories" ("CardId", "SubCategoryId")
     VALUES %s
     ON CONFLICT ("CardId", "SubCategoryId") DO NOTHING;
     """
 
-    values = [(cs["card_id"], cs["subcategory_id"], "NOW()", "NOW()") for cs in card_subcategories]
+    values = [(cs["card_id"], cs["subcategory_id"]) for cs in card_subcategories]
 
     with get_connection(DB_CONFIG_DEV) as conn:
         with conn.cursor() as cursor:

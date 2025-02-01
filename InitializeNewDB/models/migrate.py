@@ -5,6 +5,7 @@ from models.cards import insert_cards
 from models.images import insert_images
 from models.card_tags import insert_card_tags
 from models.card_subcategories import insert_card_subcategories
+from models.CardEmbeddings import insert_embedding
 
 def fetch_data_from_db(config, query, return_as_list=False):
     """
@@ -71,6 +72,7 @@ def migrate_data(batch_size=1000):
         images_data = []
         card_tags_data = []
         card_subcategories_data = []
+        cards_embeddings_data = []
 
         for row in rows:
             uuid, article, source, gender, price, brand, category, subcategory, tag_str, title, image_url, main_photo, vector, image_list = row
@@ -80,8 +82,11 @@ def migrate_data(batch_size=1000):
             category_id = categories.get(category)
             subcategory_id = subcategories.get(f"{subcategory}|{category_id}")
 
+
+
             if not brand_id or not subcategory_id:
                 print(f"Пропущена строка: brand={brand}, subcategory={subcategory}")
+                print(brand_id, category_id, subcategory_id)
                 continue
 
             # Проверяем, добавлена ли уже карточка
@@ -121,11 +126,19 @@ def migrate_data(batch_size=1000):
                 # Добавляем изображения
                 image = {
                     "card_id": uuid,
-                    "image_url": image_url,
-                    "main_photo": main_photo,
+                    "image_list": image_list,
+                    "main_link": image_url,
                     "vector": vector
                 }
                 images_data.append(image)
+
+                # Добавляем вектор изображения
+
+                card_embedding = {
+                    "card_id": uuid,
+                    "embedding": vector,
+                }
+                cards_embeddings_data.append(card_embedding)
 
 
         # Вставляем данные партиями
@@ -141,12 +154,15 @@ def migrate_data(batch_size=1000):
         if card_tags_data:
             print("Добавляем связи карточек с тегами...")
             insert_card_tags(card_tags_data)
+        if cards_embeddings_data:
+            print("Добавляем вектор карточки...")
+            insert_embedding(cards_embeddings_data)
 
         offset += batch_size  # Переход к следующей партии
 
 if __name__ == "__main__":
     try:
-        migrate_data(batch_size=1000)
+        migrate_data(batch_size=10)
         print("Миграция данных успешно завершена.")
     except Exception as e:
         print(f"Ошибка при миграции данных: {e}")

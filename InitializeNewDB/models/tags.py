@@ -131,17 +131,23 @@ def load_tags_from_json(input_file="tags.json"):
         return {}
 
 
-def insert_tags_into_dev(json_file="tags.json", batch_size=50000):
+def insert_tags_into_dev(json_file="tags.json", batch_size=1000):
     """
     Вставляет недостающие теги из JSON в базу данных DEV пачками.
     """
     # Загружаем теги из JSON
     try:
         with open(json_file, "r", encoding="utf-8") as f:
-            tags = json.load(f)
+            tags_raw = json.load(f)  # tags_raw — это { "TagKey|TagValue": "UUID" }
     except FileNotFoundError:
         print(f"Файл {json_file} не найден.")
         return
+
+    # Преобразуем в список словарей
+    tags = [
+        {"TagKey": key.split("|")[0], "TagValue": key.split("|")[1], "Id": value}
+        for key, value in tags_raw.items()
+    ]
 
     if not tags:
         print("JSON-файл пуст, новых тегов нет.")
@@ -149,7 +155,9 @@ def insert_tags_into_dev(json_file="tags.json", batch_size=50000):
 
     # Получаем текущие теги из базы данных DEV
     existing_tags = fetch_tags_from_dev()
-    existing_tags_set = {(tag["TagKey"], tag["TagValue"]) for tag in existing_tags}
+    print(existing_tags)
+    existing_tags_set = {(key, value) for key, value in existing_tags.items()}
+
 
     # Фильтруем теги, которых ещё нет в DEV
     new_tags = [
@@ -163,7 +171,7 @@ def insert_tags_into_dev(json_file="tags.json", batch_size=50000):
         return
 
     # Вставляем недостающие теги пачками
-    insert_query = 'INSERT INTO public."Tags" ("TagKey", "TagValue", "Id") VALUES %s ON CONFLICT DO NOTHING;'
+    insert_query = 'INSERT INTO public."Tags" ("TagKey", "TagValue", "Id") VALUES %s;'
 
     with get_connection(DB_CONFIG_DEV) as conn:
         with conn.cursor() as cursor:
@@ -180,5 +188,5 @@ def insert_tags_into_dev(json_file="tags.json", batch_size=50000):
 
 
 if __name__ == "__main__":
-    save_tags_to_json("../output_json/tags.json")
-    #insert_tags_into_dev("../output_json/tags.json")
+    #save_tags_to_json("../output_json/tags.json")
+    insert_tags_into_dev("../output_json/tags.json")
