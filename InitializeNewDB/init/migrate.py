@@ -1,11 +1,10 @@
 import json
-import os
 from db.db_connection import DB_CONFIG_ROW, get_connection
 from models.cards import insert_cards
 from models.images import insert_images
 from models.card_tags import insert_card_tags
 from models.card_subcategories import insert_card_subcategories
-from models.CardEmbeddings import insert_embedding
+from models.DressyAI.CardEmbeddings import insert_embedding
 
 def fetch_data_from_db(config, query, return_as_list=False):
     """
@@ -56,7 +55,7 @@ def migrate_data(batch_size=1000):
         query = f"""
         SELECT guid, article, source, gender, price_rub, brand, category, subcategory, tags, title, image_url, main_photo, embedding, image_list
         FROM card_row
-        WHERE article IS NOT NULL AND brand IS NOT NULL AND main_photo IS NOT NULL
+        WHERE article IS NOT NULL AND brand IS NOT NULL AND main_photo = 'true' and category != 'Не указано'
         ORDER BY article
         LIMIT {batch_size} OFFSET {offset};
         """
