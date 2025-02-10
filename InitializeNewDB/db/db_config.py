@@ -12,3 +12,11 @@ DB_CONFIG_DEV = {
     "password": "super",
     "port": 5500
 }
+
+DB_CONFIG_ADEL = {
+    "dbname": "AdelDB",
+    "user": "postgres",
+    "password": "super",
+    "host": "193.232.55.5",
+    "port": "5500"
+}
