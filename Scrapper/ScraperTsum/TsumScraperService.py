@@ -1,3 +1,5 @@
+import traceback
+
 from ImageEmbeddingClient import ImageEmbeddingClient
 #from clientCSV import CsvUploaderClient
 from scraper import TsumScraper
@@ -45,7 +47,7 @@ def process_category(scraper, main_category, subcategory_dict):
             href_list = scraper.get_href_list(url, j, href_list)
             print(f"Категория - {subcategory_short_name}, {j} - страничка была загружена Текущий список ссылок: {len(href_list)}")
         href_list = scraper.remove_duplicates(href_list)
-        scraper.update_links_file_json(f"Tsum-{main_category[1]}-{subcategory_short_name}.json",href_list)
+        scraper.update_links_file_json(f"Tsum-{scraper.list_categories[main_category][1]}-{subcategory_short_name}.json",href_list)
         print(f'{subcategory_short_name}.json, создан!')
         scraper.create_and_append_csv_json(f"Tsum-{scraper.list_categories[main_category][1]}-{subcategory_short_name}.json",
             f"Tsum-{scraper.list_categories[main_category][1]}-{subcategory_short_name}.csv",
@@ -55,6 +57,7 @@ def process_category(scraper, main_category, subcategory_dict):
 
     except Exception as e:
         print(f"Ошибка в категории {subcategory_short_name}: {e}")
+        print(traceback.format_exc())
 
 def test_one_light_category():
     main_category = scraper.list_categories["man_shoes"]
@@ -89,11 +92,11 @@ def run():
             info = scraper.extract_categories(scraper.list_categories[main_category][0])
             for subcategory_dict in info:
                 futures.append(
-                    executor.submit(process_category, scraper, scraper.list_categories[main_category], subcategory_dict))
+                    executor.submit(process_category, scraper, main_category, subcategory_dict))
 
         for future in concurrent.futures.as_completed(futures, timeout=7200):  # Устанавливаем тайм-аут
             try:
-                print(future.result())
+                print(future.result(), "Задача выполнена")
             except concurrent.futures.TimeoutError:
                 print("Ошибка: выполнение задачи превысило тайм-аут.")
             except Exception as e:

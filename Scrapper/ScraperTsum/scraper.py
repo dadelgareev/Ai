@@ -417,10 +417,9 @@ class TsumScraper:
 
                     # GUID для главного изображения
                     main_guid = str(uuid.uuid3(self.namespace, main_link)) if main_link else None
-
-                    # Скачиваем главное изображение
-                    if image_urls:
-                        main_image_url = image_urls[0]  # Берём только первую картинку
+                    image_path = ""
+                    if main_link:
+                        main_image_url = main_link
                         image_name = main_image_url.split('/')[-1]
                         image_path = os.path.join(images_dir, image_name)
 
@@ -429,18 +428,23 @@ class TsumScraper:
                                 self.download_image(main_image_url, images_dir, image_name)
                             except Exception as e:
                                 logging.error(f"Ошибка при скачивании {main_image_url}: {e}")
+                                image_path = ""  # Если не удалось скачать, сбрасываем путь
                                 continue
                     else:
                         main_image_url = "Изображение не найдено"
 
-                    # Вычисляем эмбеддинг только для `main_link`
+                    # Вычисляем эмбеддинг только если есть скачанное изображение
                     embedding_norm = None
-                    if main_link:
+                    if image_path and os.path.exists(image_path):
                         try:
-                            embedding_norm = grpc_client.get_embedding(image_name=main_link, image_data=None)
-                        except Exception as e:
-                            logging.error(f"Ошибка при получении эмбеддинга через gRPC для {main_link}: {e}")
+                            with open(image_path, "rb") as img_file:
+                                image_bytes = img_file.read()  # Читаем бинарные данные
 
+                            embedding_norm = grpc_client.get_embedding(image_name=image_name, image_data=image_bytes)
+
+                        except Exception as e:
+                            logging.error(f"Ошибка при получении эмбеддинга через gRPC для {main_image_url}: {e}")
+                            continue
                     # Формируем строку для CSV (ОДНА строка на товар)
                     row_data = {
                         'Source': 'Lamoda',
