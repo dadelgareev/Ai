@@ -1,0 +1,43 @@
+--Получить карту и категорию, исходя из только соответствий с категориями
+        SELECT DISTINCT ON (cat."Id") cards."Id", cat."Id"
+        FROM "public"."Cards" cards
+        JOIN "public"."SubCategories" subcat ON cards."Id" = subcat."CardId"
+        JOIN "public"."SubCategory" sub ON subcat."SubCategoryId" = sub."Id"
+        JOIN "public"."Categories" cat ON sub."CategoryId" = cat."Id"
+        WHERE cat."Id" = ANY(%s::UUID[])  -- Приводим к UUID[]
+        ORDER BY cat."Id", random();  -- Выбираем случайную карточку в каждой категории
+
+--Получить карту и категорию, исходя из соответствий с тегами и категориями
+        SELECT DISTINCT ON (cat."Id") cards."Id", cat."Id"
+        FROM "public"."Cards" cards
+        JOIN "public"."SubCategories" subcat ON cards."Id" = subcat."CardId"
+        JOIN "public"."SubCategory" sub ON subcat."SubCategoryId" = sub."Id"
+        JOIN "public"."Categories" cat ON sub."CategoryId" = cat."Id"
+        WHERE cat."Id" = ANY(%s::UUID[])
+        AND EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(cards."Tags"::jsonb -> %s) AS tag_values
+            WHERE tag_values::text = %s
+        )
+        ORDER BY cat."Id", random();
+
+--Получить карту и категорию, исходя по тегам, категориям и векторам
+        WITH user_data AS (
+            SELECT "UserCategoryId", "UserEmbedding"
+            FROM "DressyAI"."UsersEmbeddings"
+            WHERE "UserId" = %s
+        )
+        SELECT DISTINCT ON (cat."Id") cards."Id", cat."Id"
+        FROM "public"."Cards" cards
+        JOIN "public"."SubCategories" subcat ON cards."Id" = subcat."CardId"
+        JOIN "public"."SubCategory" sub ON subcat."SubCategoryId" = sub."Id"
+        JOIN "public"."Categories" cat ON sub."CategoryId" = cat."Id"
+        JOIN "DressyAI"."CardsEmbenddings" emb ON cards."Id" = emb."CardId"
+        JOIN user_data u ON cat."Id" = u."UserCategoryId"
+        WHERE cat."Id" = ANY(%s::UUID[])
+        AND (1 - (emb."CardEmbendding" <=> u."UserEmbedding")) >= 0.7
+        AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements(cards."Tags" -> %s) tag_values
+            WHERE tag_values::int = %s
+        )
+        ORDER BY cat."Id", (emb."CardEmbendding" <=> u."UserEmbedding") ASC, random();

@@ -26,450 +26,9 @@ class TsumScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
         }
-        self.categories_constants = {
-    "Блузы и рубашки": [
-        "Блузы",
-        "Рубашки",
-        "Рубашки с длинным рукавом",
-        "Джинсовые рубашки",
-        "Рубашки с коротким рукавом",
-        "Рубашки и сорочки",
-        "Джинсовые",
-        "Блузы и рубашки",
-        "Блузы с коротким рукавом",
-        "Блузы с длинным рукавом",
-        "Блузы с рюшами и воланами",
-        "Кружевные блузы",
-        "Блузы без рукавов",
-        "Блузы с бантом",
-        "Блузы с открытыми плечами",
-        "Рубашки и топы"
-    ],
-    "Брюки": [
-        "Брюки",
-        "Бриджи и капри",
-        "Горнолыжные брюки",
-        "Джоггеры",
-        "Карго",
-        "Классические брюки",
-        "Кожаные брюки",
-        "Кюлоты",
-        "Леггинсы",
-        "Повседневные брюки",
-        "Спортивные брюки",
-        "Тайтсы",
-        "Зауженные брюки",
-        "Утепленные брюки",
-        "Брюки и шорты",
-        "Прямые брюки",
-        "Леггинсы и тайтсы",
-        "Прямые",
-        "Бордшорты"
-    ],
-    "Верхняя одежда": [
-        "Анораки",
-        "Бомберы",
-        "Горнолыжные куртки",
-        "Демисезонные куртки",
-        "Джинсовые куртки",
-        "Кожаные куртки",
-        "Легкие куртки и ветровки",
-        "Пальто",
-        "Парки",
-        "Плащи и тренчи",
-        "Пончо и кейпы",
-        "Пуховики и зимние куртки",
-        "Утепленные костюмы и комбинезоны",
-        "Шубы и дубленки",
-        "Зимние куртки",
-        "Верхняя одежда",
-        "Пуховики",
-        "Куртки",
-        "Плащи",
-        "Толстовки и куртки",
-        "Куртки меховые",
-        "Одежда",
-        "Шубы",
-        "Демисезонные пальто",
-        "Двубортные пальто",
-        "Классические",
-        "Ветровки и куртки",
-        "Плащи и тренчкоты",
-        "Тренчи",
-        "Спортивные",
-        "Дубленки",
-        "Широкие и расклешенные",
-        "Ветровки",
-        "Зимние пальто",
-        "Летние пальто",
-        "Пальто меховые",
-        "Накидки и пончо",
-        "Дублёнки",
-        "Тренчкоты",
-        "Кейпы и накидки"
-    ],
-    "Джемперы, свитеры, кардиганы": [
-        "Водолазки",
-        "Джемперы и пуловеры",
-        "Жилеты",
-        "Кардиганы",
-        "Свитеры",
-        "Джемперы",
-        "Джемперы и кардиганы",
-        "Джемперы, свитеры и кардиганы",
-        "Джемперы",
-        "Утепленные жилеты",
-        "Меховые жилеты",
-        "Удлиненные жилеты",
-        "Утепленные",
-        "Кожаные жилеты",
-        "Джинсовые жилеты",
-        "Пончо, жилеты и накидки",
-        "Накидки"
-    ],
-    "Джинсы": [
-        "Джеггинсы",
-        "Прямые джинсы",
-        "Узкие джинсы",
-        "Широкие и расклешенные джинсы",
-        "Зауженные джинсы",
-        "Зауженные джинсы",
-        "Джинсы",
-        "Зауженные",
-        "Классические",
-        "Широкие джинсы",
-        "Расклешенные джинсы",
-        "Джинсы-бойфренды",
-        "Джинсы-мом"
-    ],
-    "Домашняя одежда": [
-        "Комбинезоны",
-        "Комплекты",
-        "Маски для сна",
-        "Ночные сорочки",
-        "Пижамы",
-        "Халаты",
-        "Хлопковые халаты",
-        "Махровые халаты",
-        "Домашняя одежда",
-        "Бархатные халаты",
-        "Атласные и кружевные халаты",
-        "Пижамы с брюками",
-        "Пижамы с шортами",
-        "Трикотажные халаты",
-        "Флисовые халаты",
-        "Сорочки"
-    ],
-    "Комбинезоны": [
-        "Джинсовые комбинезоны",
-        "Кигуруми",
-        "Комбинезоны с брюками",
-        "Комбинезоны с шортами",
-        "Спортивные комбинезоны",
-        "Вечерние комбинезоны",
-        "Комбинезоны джинсовые",
-        "Брюки и комбинезоны"
-    ],
-    "Купальники и пляжная одежда": [
-        "Лифы",
-        "Парео",
-        "Плавки",
-        "Пляжные платья и туники",
-        "Раздельные купальники",
-        "Слитные купальники и монокини",
-        "Плавки и шорты для плавания",
-        "Шорты для плавания",
-        "Слитные купальники",
-        "Купальники и пляжная одежда",
-        "Купальники-халтер",
-        "Плавки с завышенной талией",
-        "Купальники и парео",
-        "Спортивные купальники",
-        "Купальники-бралетт",
-        "Плавки-бразилиана",
-        "Плавки на завязках",
-        "Монокини",
-        "Купальники-бандо",
-        "Купальники",
-        "Пляжная одежда"
-    ],
-    "Нижнее белье": [
-        "Аксессуары",
-        "Бюстгальтеры",
-        "Комбинации",
-        "Комплекты",
-        "Корректирующее белье",
-        "Корсеты",
-        "Пояса для чулок",
-        "Термобелье",
-        "Трусы",
-        "Эротическое белье",
-        "Брифы",
-        "Трусы-шорты",
-        "Боксеры",
-        "Бралетт",
-        "Нижнее белье",
-        "Стринги",
-        "Верх",
-        "Низ",
-        "Бесшовные",
-        "Бесшовные трусы",
-        "Трусы-бразилиана",
-        "Слипы",
-        "Корректирующее",
-        "Комплекты трусов",
-        "Эротическое",
-        "Балконет",
-        "Лифы-бралетт",
-        "С треугольными чашечками",
-        "Слитные",
-        "Бандо",
-        "Лифы-бандо",
-        "Лифы-халтер",
-        "Бандажи",
-        "Комплекты белья"
-    ],
-    "Носки, чулки, колготки": [
-        "Гольфы и гетры",
-        "Колготки",
-        "Короткие носки",
-        "Носки",
-        "Подследники",
-        "Чулки",
-        "Кальсоны",
-        "Носки и гетры",
-        "Носки и колготки",
-        "Гетры",
-        "Гетры и колготки",
-        "Носки, чулки и колготки"
-    ],
-    "Пиджаки и костюмы": [
-        "Жакеты",
-        "Кимоно",
-        "Костюмы с брюками",
-        "Костюмы с шортами",
-        "Костюмы с юбкой",
-        "Пиджаки",
-        "Костюмы",
-        "Классические костюмы",
-        "Спортивные костюмы",
-        "Пиджаки и костюмы",
-        "Жакеты и пиджаки",
-        "Костюмы и комбинезоны",
-        "Костюмы и жакеты",
-        "Вязаные костюмы",
-        "Смокинги"
-    ],
-    "Платья и сарафаны": [
-        "Вечерние платья",
-        "Джинсовые платья",
-        "Кожаные платья",
-        "Платья с запахом",
-        "Платья со спущенными плечами",
-        "Повседневные платья",
-        "Сарафаны",
-        "Свадебные платья",
-        "Платья",
-        "Платья-рубашки",
-        "Трикотажные платья",
-        "Платья-комбинации",
-        "Платья-футляр",
-        "Платья-пиджаки",
-        "Платья-футболки",
-        "Платья-майки",
-        "Платья и сарафаны",
-        "Платья и туники",
-        "Кружевные платья"
-    ],
-    "Топы и майки": [
-        "Вязаные топы",
-        "Корсеты",
-        "Майки",
-        "Спортивные майки",
-        "Спортивные топы",
-        "Топы в бельевом стиле",
-        "Топы на бретелях",
-        "Топы с баской",
-        "Топы свободного кроя",
-        "Топы со спущенными плечами",
-        "Топы",
-        "Топы и майки",
-        "Боди с коротким рукавом",
-        "Боди",
-        "Боди с длинным рукавом",
-        "Кроп-топы",
-        "Спортивные топы и майки",
-        "Майки и топы"
-    ],
-    "Футболки и поло": [
-        "Комплекты",
-        "Лонгсливы",
-        "Поло",
-        "Спортивные футболки и лонгсливы",
-        "Футболки",
-        "Туники",
-        "Футболки и майки",
-        "Поло с коротким рукавом",
-        "Футболки и поло",
-        "Футболки с коротким рукавом",
-        "Футболки и лонгсливы",
-        "Спортивные футболки",
-        "Спортивные лонгсливы",
-        "Рашгарды"
-    ],
-    "Худи и свитшоты": [
-        "Олимпийки",
-        "Свитшоты",
-        "Толстовки",
-        "Флиски",
-        "Худи",
-        "Толстовки и свитшоты",
-        "Поло с длинным рукавом",
-        "Худи и свитшоты",
-        "Олимпийки и толстовки",
-        "Платья-толстовки",
-        "Пуловеры",
-        "Толстовки и олимпийки"
-    ],
-    "Шорты": [
-        "Бермуды",
-        "Велосипедки",
-        "Джинсовые шорты",
-        "Карго",
-        "Повседневные шорты",
-        "Спортивные шорты",
-        "Шорты",
-        "Шортики",
-        "Кожаные шорты"
-    ],
-    "Юбки": [
-        "Джинсовые юбки",
-        "Кожаные юбки",
-        "Плиссированные юбки",
-        "Прямые юбки",
-        "Узкие юбки",
-        "Юбки",
-        "Юбки-трапеции и широкие",
-        "Юбки-шорты",
-        "Юбки и парео"
-    ],
-    "Прочее": [
-        "Уход за одеждой",
-        "Шнурки",
-        "Уход за обувью",
-        "Экипировка",
-        "Спортивный инвентарь",
-        "Аксессуары для путешествий",
-        "Аксессуары для обуви",
-        "Пляжные принадлежности"
-    ],
-    "Балетки": [
-        "Балетки с квадратным носом",
-        "Балетки с круглым носом",
-        "Балетки с острым носом",
-        "Балетки"
-    ],
-    "Ботильоны": [
-        "Ботильоны с квадратным носом",
-        "Ботильоны с круглым носом",
-        "Ботильоны с острым носом",
-        "Ботильоны с открытым носом",
-        "Высокие ботильоны",
-        "Низкие ботильоны",
-        "Ботильоны",
-        "Ботинки и полусапоги"
-    ],
-    "Ботинки": [
-        "Высокие ботинки",
-        "Мартинсы и др.",
-        "Низкие ботинки",
-        "Оксфорды и дерби",
-        "Тимберленды и др.",
-        "Трекинговые ботинки",
-        "Челси",
-        "Казаки",
-        "Дезерты",
-        "Ботинки",
-        "Обувь"
-    ],
-    "Вечерняя обувь": [
-        "Свадебные туфли",
-        "Туфли с застежкой на лодыжке",
-        "Туфли с открытой пяткой",
-        "Туфли с открытой стопой",
-        "Туфли с открытым носом",
-        "Вечерняя обувь"
-    ],
-    "Домашняя обувь": [
-        "Сланцы",
-        "Домашняя обувь"
-    ],
-    "Кроссовки и кеды": [
-        "Кеды",
-        "Высокие кеды",
-        "Низкие кеды",
-        "Кроссовки",
-        "Высокие кроссовки",
-        "Низкие кроссовки",
-        "Бутсы"
-    ],
-    "Мокасины и топсайдеры": [
-        "Мокасины",
-        "Топсайдеры",
-        "Мокасины и топсайдеры"
-    ],
-    "Обувь с увеличенной полнотой": [
-        "Обувь с увеличенной полнотой"
-    ],
-    "Резиновая обувь": [
-        "Галоши",
-        "Джиббитсы",
-        "Акваобувь",
-        "Резиновая обувь",
-        "Кроксы и др."
-    ],
-    "Сабо и мюли": [
-        "Сабо и мюли",
-        "Сабо",
-        "Мюли"
-    ],
-    "Сандалии": [
-        "Эспадрильи",
-        "Сланцы",
-        "Повседневные сандалии",
-        "Спортивные сандалии",
-        "Сандалии",
-        "Сандалии на завязках"
-    ],
-    "Сапоги": [
-        "Ботфорты",
-        "Валенки",
-        "Дутики",
-        "Полусапоги",
-        "Сапоги",
-        "Угги и унты",
-        "Сапоги-чулки",
-        "Сапоги-трубы"
-    ],
-    "Слипоны": [
-        "Высокие слипоны",
-        "Низкие слипоны",
-        "Слипоны"
-    ],
-    "Туфли": [
-        "Закрытые туфли",
-        "Лодочки",
-        "Лоферы",
-        "Туфли Мэри Джейн",
-        "Босоножки",
-        "Монки",
-        "Оксфорды",
-        "Дерби",
-        "Туфли",
-        "Туфли с открытыми боками",
-        "Туфли на шнурках"
-    ]
-}
+        self.categories_constants = json.load(open('constant.json', 'r', encoding='utf-8'))
+
+
     def get_category_for_subcategory(self, subcategory):
         """
         Функция для поиска категории по подкатегории.
@@ -631,7 +190,8 @@ class TsumScraper:
             soup = BeautifulSoup(html, 'html.parser')
 
             # Парсим список категорий
-            categories_list = [item.get_text(strip=True) for item in soup.find_all('li', class_='Breadcrumbs__item___IVD_E')]
+            categories_list = [item.get_text(strip=True) for item in
+                               soup.find_all('li', class_='Breadcrumbs__item___IVD_E')]
 
             # Ищем теги <script> с атрибутом data-app="true"
             script_tags = soup.find_all('script', attrs={'data-app': 'true'})
@@ -639,68 +199,63 @@ class TsumScraper:
                 logging.warning("Теги <script> с атрибутом data-app='true' не найдены.")
                 return None
 
-            # Обрабатываем найденные теги <script>
-            for script in script_tags:
-                script_content = script.string
-                if script_content and "globalThis.initialState" in script_content:
-                    try:
-                        # Извлекаем JSON из строки
-                        json_start = script_content.find("{")
-                        json_data = script_content[json_start:]
-                        data_dict = json.loads(json_data)
+            # Ищем JSON-данные в тегах <script>
+            script_info = soup.find_all("script", type="application/ld+json")
+            json_attributes = {}
+            for script in script_info:
+                clean_string = script.string.replace("\\", "")  # Убираем экранирование
+                try:
+                    json_data = json.loads(clean_string)  # Преобразуем JSON
+                    if isinstance(json_data, list):  # JSON может быть в виде списка
+                        json_data = json_data[0]
 
-                        # Извлечение данных из JSON
-                        product_info = data_dict["product"]["product"].get(url_tag, {}).get("product", {})
+                    if json_data.get("@type") in ["Product", "BreadcrumbList"]:
+                        json_attributes.update(json_data)
+                except (json.JSONDecodeError, TypeError):
+                    continue
 
-                        # Извлекаем изображения
-                        for image in product_info.get("photos", []):
-                            image_urls.append(image.get("large", ""))
+            # Извлекаем изображения из элементов с классом Mobile__slide___Z5m2T
+            image_divs = soup.find_all("div", class_="Mobile__slide___Z5m2T")
+            for div in image_divs:
+                img_tag = div.find("img")  # Ищем тег <img> внутри div
+                if img_tag and img_tag.get("src"):
+                    image_urls.append(img_tag["src"])
 
-                        # Извлекаем теги, бренд, категории, цену
-                        tags = product_info.get("information", [])
-                        color = product_info.get("color", {}).get("title", "")
-                        brand = product_info.get("brand", {}).get("title", "")
-                        category = product_info.get("category", {}).get("title", "")
-                        price = product_info.get("sizes", [{}])[0].get("price", {}).get("originalPrice", None)
+            # Добавляем изображения в итоговый словарь
+            json_attributes["image_urls"] = image_urls
 
-                        tags = self.parse_tags(tags)
-                        tags["Цвет"] = color
-                        description = product_info.get("description", "Описание не найдено")
+            color_info = soup.find("span", class_="SingleColor__colorTitle___VTGcs")
+            json_attributes["color"] = color_info.get_text(strip=True)
+            #return json_attributes
 
-                        # Извлекаем артикул
-                        article = None
-                        for item in tags:
-                            if "Артикул:" in item:
-                                article = item.split(": ")[-1].strip()
-                                break
+            product_data = {
+                "image_urls": json_attributes.get("image_urls", []),
 
-                        # Формируем результирующий словарь
-                        product_data = {
-                            "image_urls": image_urls,
-                            "tags": tags,
-                            #"color": color,
-                            "brand": brand,
-                            "category": category,
-                            "price": price,
-                            "article": article,
-                            "description": description,
-                            "list_categories": categories_list
-                        }
+                "tags": {"Цвет": json_attributes.get("color", "").lower()} if "color" in json_attributes else {},
+                "main_link": json_attributes.get("image", ""),
+                "title": json_attributes.get("name", ""),
+                "brand": json_attributes.get("brand", {}).get("name", ""),
 
-                        return product_data
+                "subcategory": json_attributes.get("itemListElement", [{}])[-1].get("item", "").get("name", ""),
 
-                    except KeyError as ke:
-                        logging.error(f"Ключ '{ke}' не найден в JSON. Проверьте структуру данных.")
-                        return None
-                    except json.JSONDecodeError as je:
-                        logging.error(f"Ошибка декодирования JSON: {je}")
-                        return None
+                "price": json_attributes.get("offers", {}).get("price", ""),
+                "url": json_attributes.get("offers", {}).get("url", ""),
 
-            logging.warning("Не удалось найти данные о продукте в JSON.")
+                "article": url.strip("/").split("/")[-1].split("-")[0],
+
+                "description": json_attributes.get("description", ""),
+            }
+
+            return product_data
+
+        except KeyError as ke:
+            logging.error(f"Ключ '{ke}' не найден в JSON. Проверьте структуру данных.")
             return None
-
+        except json.JSONDecodeError as je:
+            logging.error(f"Ошибка декодирования JSON: {je}")
+            return None
         except Exception as e:
-            logging.error(f"Произошла ошибка при обработке страницы: {e}")
+            logging.error(f"Ошибка при обработке страницы {url}: {e}")
             return None
 
     def parse_tags(self, tags):
@@ -768,16 +323,6 @@ class TsumScraper:
         logging.info(f"Удалено дубликатов, осталось уникальных ссылок: {len(unique_links)}")
         return unique_links
 
-    def get_category_for_subcategory(self, subcategory):
-        """
-        Функция для поиска категории по подкатегории.
-        Возвращает категорию (ключ) из словаря, если подкатегория найдена.
-        """
-        for category, subcategories in self.categories_constants.items():
-            if subcategory in subcategories:
-                return category
-        return "Не указано"  # Если подкатегория не найдена, возвращаем "Не указано"
-
     def download_image(self, url, save_dir, image_name):
         try:
             response = requests.get(url)
@@ -813,28 +358,25 @@ class TsumScraper:
 
     def create_and_append_csv_json(self, json_file, output_csv, main_category, grpc_client=None):
         """
-        Добавляет ссылки из JSON в существующий и новый CSV-файлы с категориями, тегами, эмбеддингом и источником.
-        Обрабатывает только ссылки со статусом "processed: False". После обработки меняет статус на "processed: True".
+        Добавляет ссылки из JSON в CSV-файл.
+        Записывает ОДНУ строку на каждую ссылку.
         """
 
-        # Создаём имя нового CSV-файла с припиской '_temp'
+        # Создаём имя временного CSV-файла
         temp_output_csv = os.path.splitext(output_csv)[0] + '_temp.csv'
 
         # Поля CSV-файла
-        fieldnames = ['Source', 'Source_csv', 'Guid', 'Image_url', 'Main_photo', 'Guid_list', 'Article', 'Gender',
-                      'Category', 'Subcategory', 'Embedding', 'Price', 'Brand', 'Tags']
+        fieldnames = ['Source', 'Source_csv', 'Guid', 'Url', 'Title', 'Main_photo', 'Image_list', 'Article', 'Gender',
+                      'Category', 'Subcategory', 'Embedding', 'Price', 'Brand', 'Tags', 'Description']
 
         # Определяем директорию для изображений
-        if main_category[1] == "Man":
-            images_dir = os.path.join("Photos", "Man", os.path.splitext(output_csv)[0])
-        elif main_category[1] == "Woman":
-            images_dir = os.path.join("Photos", "Woman", os.path.splitext(output_csv)[0])
-        else:
-            images_dir = os.path.splitext(output_csv)[0]  # Для других категорий
+        category_name = main_category[1]
+        images_dir = os.path.join("Photos", category_name, os.path.splitext(output_csv)[0]) if category_name in ["Man",
+                                                                                                                 "Woman"] else \
+        os.path.splitext(output_csv)[0]
 
-        # Создание директории для изображений, если ещё не существует
-        if not os.path.exists(images_dir):
-            os.makedirs(images_dir)
+        # Создание директории, если её нет
+        os.makedirs(images_dir, exist_ok=True)
 
         # Загрузка ссылок из JSON
         links_data = {}
@@ -842,96 +384,92 @@ class TsumScraper:
             with open(json_file, 'r', encoding='utf-8') as file:
                 links_data = json.load(file)
 
-        # Выбираем только ссылки с "processed: False"
+        # Фильтруем только необработанные ссылки
         unprocessed_links = [entry for entry in links_data.get("links", []) if not entry["processed"]]
 
-        # Открываем исходный и новый CSV файлы
+        # Открываем CSV-файл
         with open(output_csv, 'a', newline='', encoding='utf-8') as old_csvfile, \
                 open(temp_output_csv, 'w', newline='', encoding='utf-8') as new_csvfile:
 
-            # Создаем писателей для обоих файлов
             old_writer = csv.DictWriter(old_csvfile, fieldnames=fieldnames)
             new_writer = csv.DictWriter(new_csvfile, fieldnames=fieldnames)
 
-
-
-            if old_csvfile.tell() == 0:  # tell возвращает 0, если файл пуст
+            # Если основной CSV пустой, записываем заголовки
+            if old_csvfile.tell() == 0:
                 old_writer.writeheader()
-            new_writer.writeheader()  # Записываем заголовок в новый файл
+            new_writer.writeheader()
 
-            # Проходимся по каждой новой ссылке
+            # Обрабатываем каждую ссылку (по одной строке в CSV)
             for link_entry in unprocessed_links:
                 url = link_entry["url"].strip()
 
                 try:
-                    # Получаем атрибуты и изображения для текущей ссылки
                     result = self.get_all_atrib_from_page(url)
                 except Exception as e:
                     logging.error(f"Ошибка при обработке URL {url}: {e}")
                     continue
 
-                # Берём список URL картинок
+                # Основные атрибуты товара
                 image_urls = result.get('image_urls', [])
-                subcategory = result.get('category', "Категория не найдена")
+                main_link = result.get('main_link')
+                subcategory = result.get('subcategory', "Категория не найдена")
 
-                # Записываем данные для каждой картинки
-                guid_list = []
-                embedding_list = []
-                for index, image_url in enumerate(image_urls):
-                    image_name = image_url.split('/')[-1]
+                # GUID для главного изображения
+                main_guid = str(uuid.uuid3(self.namespace, main_link)) if main_link else None
+
+                # Скачиваем главное изображение
+                if image_urls:
+                    main_image_url = image_urls[0]  # Берём только первую картинку
+                    image_name = main_image_url.split('/')[-1]
                     image_path = os.path.join(images_dir, image_name)
+
+                    if not os.path.exists(image_path):  # Если файла нет, скачиваем
+                        try:
+                            self.download_image(main_image_url, images_dir, image_name)
+                        except Exception as e:
+                            logging.error(f"Ошибка при скачивании {main_image_url}: {e}")
+                            continue
+                else:
+                    main_image_url = "Изображение не найдено"
+
+                # Вычисляем эмбеддинг только для `main_link`
+                embedding_norm = None
+                if main_link:
                     try:
-                        if not os.path.exists(image_path):
-                            self.download_image(image_url, images_dir, image_name)
+                        embedding_norm = grpc_client.get_embedding(image_name=main_link, image_data=None)
                     except Exception as e:
-                        logging.error(f"Ошибка при скачивании картинки {image_url}: {e}")
-                        continue
+                        logging.error(f"Ошибка при получении эмбеддинга через gRPC для {main_link}: {e}")
 
-                    try:
-                        with open(image_path, "rb") as image_file:
-                            image_data = image_file.read()
-                            embedding_norm = grpc_client.get_embedding(image_name=image_path, image_data=image_data)
-                            embedding_list.append(embedding_norm)
-                    except Exception as e:
-                        logging.error(f"Ошибка при получении эмбеддинга через gRPC для {image_name}: {e}")
-                        continue
+                # Формируем строку для CSV (ОДНА строка на товар)
+                row_data = {
+                    'Source': 'Lamoda',
+                    'Source_csv': output_csv,
+                    'Guid': main_guid,
+                    'Url': result.get('url', "Ссылка не найдена"),
+                    'Title': result.get('title', "Название не найдено"),
+                    'Main_photo': main_link,
+                    'Image_list': image_urls,
+                    'Article': result.get('article', "Артикул не найден"),
+                    'Gender': main_category[1],
+                    'Category': self.get_category_for_subcategory(subcategory),
+                    'Subcategory': subcategory,
+                    'Embedding': embedding_norm if embedding_norm else "Эмбеддинг не определен",
+                    'Price': result.get('price', 'Цена не найдена'),
+                    'Brand': result.get('brand', 'Бренд не найден'),
+                    'Tags': result.get('tags', {}),
+                    'Description': result.get('description', 'Описание не найдено')
+                }
+                # Записываем в CSV
+                old_writer.writerow(row_data)
+                new_writer.writerow(row_data)
 
-                    # Генерация GUID
-                    guid = str(uuid.uuid3(self.namespace, image_url))
-                    guid_list.append(guid)
-
-                # Пропускаем ссылку, если количество элементов в списках не совпадает
-                if len(guid_list) != len(embedding_list) or len(image_urls) != len(guid_list):
-                    logging.warning(f"Пропускаем ссылку {url}, так как не все фотографии были обработаны. Длина guid = {len(guid_list)}, embedding_list = {len(embedding_list)}, image_urls = {len(image_urls)}")
-                    continue
-
-                # Обработка изображений с учетом главного фото
-                main_photo_guid = guid_list[0] if guid_list else None
-                for index, image_url in enumerate(image_urls):
-                    row_data = {
-                        'Source': 'Lamoda',
-                        'Source_csv': output_csv,
-                        'Guid': guid_list[index],
-                        'Image_url': image_url,
-                        'Main_photo': "None" if index == 0 else main_photo_guid,
-                        'Guid_list': json.dumps(guid_list, ensure_ascii=False),
-                        'Article': result.get('article', "Артикул не найден"),
-                        'Gender': main_category[1],
-                        'Category': self.get_category_for_subcategory(subcategory),
-                        'Subcategory': subcategory,
-                        'Embedding': embedding_list[index] if index < len(embedding_list) else "Ошибка",
-                        'Price': result.get('price', 'Цена не найдена'),
-                        'Brand': result.get('brand', 'Бренд не найден'),
-                        'Tags': json.dumps(result.get('tags', []), ensure_ascii=False)
-                    }
-                    old_writer.writerow(row_data)
-                    new_writer.writerow(row_data)
-
+                # Обновляем статус в JSON
                 link_entry["processed"] = True
 
-        # Сохраняем обновлённый JSON с обновлёнными статусами
+        # Обновляем JSON-файл
         with open(json_file, 'w', encoding='utf-8') as file:
             json.dump(links_data, file, ensure_ascii=False, indent=4)
+
         logging.info(f"Данные добавлены в '{output_csv}' и '{temp_output_csv}'")
         print(f"Данные добавлены в '{output_csv}' и '{temp_output_csv}'")
 
@@ -1031,8 +569,15 @@ if __name__ == "__main__":
     dict_info = scraper.get_all_atrib_from_page("https://www.tsum.ru/product/7015783-kashemirovoe-palto-must-chernyi/")
     href_list = ["https://www.tsum.ru/product/7015783-kashemirovoe-palto-must-chernyi/"]
     scraper.update_links_file_json("123.json", href_list)
-    scraper.create_and_append_csv_json_fine_tuning("123.json", "123.csv",scraper.list_categories["man_clothes"])
-    print(dict_info)
+    scraper.create_and_append_csv_json("123.json", "123.csv",scraper.list_categories["man_clothes"])
+    for key, value in dict_info.items():
+        print(f"{key}: {value}")
+
+    html_info = scraper.fetch_page("https://www.tsum.ru/product/7015783-kashemirovoe-palto-must-chernyi/")
+    soup = BeautifulSoup(html_info, 'html.parser')
+    #print(html_info)
+    with open("html_test.txt", 'w', encoding='utf-8') as file:
+        file.write(html_info)
     """
     for main_category in scraper.list_categories:
         info = scraper.extract_categories(scraper.list_categories[main_category][0])
