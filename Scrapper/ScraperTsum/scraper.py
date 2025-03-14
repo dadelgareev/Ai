@@ -401,68 +401,71 @@ class TsumScraper:
 
             # Обрабатываем каждую ссылку (по одной строке в CSV)
             for link_entry in unprocessed_links:
-                url = link_entry["url"].strip()
-
                 try:
-                    result = self.get_all_atrib_from_page(url)
-                except Exception as e:
-                    logging.error(f"Ошибка при обработке URL {url}: {e}")
-                    continue
+                    url = link_entry["url"].strip()
 
-                # Основные атрибуты товара
-                image_urls = result.get('image_urls', [])
-                main_link = result.get('main_link')
-                subcategory = result.get('subcategory', "Категория не найдена")
-
-                # GUID для главного изображения
-                main_guid = str(uuid.uuid3(self.namespace, main_link)) if main_link else None
-
-                # Скачиваем главное изображение
-                if image_urls:
-                    main_image_url = image_urls[0]  # Берём только первую картинку
-                    image_name = main_image_url.split('/')[-1]
-                    image_path = os.path.join(images_dir, image_name)
-
-                    if not os.path.exists(image_path):  # Если файла нет, скачиваем
-                        try:
-                            self.download_image(main_image_url, images_dir, image_name)
-                        except Exception as e:
-                            logging.error(f"Ошибка при скачивании {main_image_url}: {e}")
-                            continue
-                else:
-                    main_image_url = "Изображение не найдено"
-
-                # Вычисляем эмбеддинг только для `main_link`
-                embedding_norm = None
-                if main_link:
                     try:
-                        embedding_norm = grpc_client.get_embedding(image_name=main_link, image_data=None)
+                        result = self.get_all_atrib_from_page(url)
                     except Exception as e:
-                        logging.error(f"Ошибка при получении эмбеддинга через gRPC для {main_link}: {e}")
+                        logging.error(f"Ошибка при обработке URL {url}: {e}")
+                        continue
 
-                # Формируем строку для CSV (ОДНА строка на товар)
-                row_data = {
-                    'Source': 'Lamoda',
-                    'Source_csv': output_csv,
-                    'Guid': main_guid,
-                    'Url': result.get('url', "Ссылка не найдена"),
-                    'Title': result.get('title', "Название не найдено"),
-                    'Main_photo': main_link,
-                    'Image_list': image_urls,
-                    'Article': result.get('article', "Артикул не найден"),
-                    'Gender': main_category[1],
-                    'Category': self.get_category_for_subcategory(subcategory),
-                    'Subcategory': subcategory,
-                    'Embedding': embedding_norm if embedding_norm else "Эмбеддинг не определен",
-                    'Price': result.get('price', 'Цена не найдена'),
-                    'Brand': result.get('brand', 'Бренд не найден'),
-                    'Tags': result.get('tags', {}),
-                    'Description': result.get('description', 'Описание не найдено')
-                }
-                # Записываем в CSV
-                old_writer.writerow(row_data)
-                new_writer.writerow(row_data)
+                    # Основные атрибуты товара
+                    image_urls = result.get('image_urls', [])
+                    main_link = result.get('main_link')
+                    subcategory = result.get('subcategory', "Категория не найдена")
 
+                    # GUID для главного изображения
+                    main_guid = str(uuid.uuid3(self.namespace, main_link)) if main_link else None
+
+                    # Скачиваем главное изображение
+                    if image_urls:
+                        main_image_url = image_urls[0]  # Берём только первую картинку
+                        image_name = main_image_url.split('/')[-1]
+                        image_path = os.path.join(images_dir, image_name)
+
+                        if not os.path.exists(image_path):  # Если файла нет, скачиваем
+                            try:
+                                self.download_image(main_image_url, images_dir, image_name)
+                            except Exception as e:
+                                logging.error(f"Ошибка при скачивании {main_image_url}: {e}")
+                                continue
+                    else:
+                        main_image_url = "Изображение не найдено"
+
+                    # Вычисляем эмбеддинг только для `main_link`
+                    embedding_norm = None
+                    if main_link:
+                        try:
+                            embedding_norm = grpc_client.get_embedding(image_name=main_link, image_data=None)
+                        except Exception as e:
+                            logging.error(f"Ошибка при получении эмбеддинга через gRPC для {main_link}: {e}")
+
+                    # Формируем строку для CSV (ОДНА строка на товар)
+                    row_data = {
+                        'Source': 'Lamoda',
+                        'Source_csv': output_csv,
+                        'Guid': main_guid,
+                        'Url': result.get('url', "Ссылка не найдена"),
+                        'Title': result.get('title', "Название не найдено"),
+                        'Main_photo': main_link,
+                        'Image_list': image_urls,
+                        'Article': result.get('article', "Артикул не найден"),
+                        'Gender': main_category[1],
+                        'Category': self.get_category_for_subcategory(subcategory),
+                        'Subcategory': subcategory,
+                        'Embedding': embedding_norm if embedding_norm else "Эмбеддинг не определен",
+                        'Price': result.get('price', 'Цена не найдена'),
+                        'Brand': result.get('brand', 'Бренд не найден'),
+                        'Tags': result.get('tags', {}),
+                        'Description': result.get('description', 'Описание не найдено')
+                    }
+                    # Записываем в CSV
+                    old_writer.writerow(row_data)
+                    new_writer.writerow(row_data)
+                except Exception as e:
+                    logging.error(f"Глобальная ошибка: {url}: {e}")
+                    continue
                 # Обновляем статус в JSON
                 link_entry["processed"] = True
 
